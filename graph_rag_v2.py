@@ -18,7 +18,7 @@ import matplotlib.patches as patches
 import streamlit as st
 import os
 import sys
-from dotenv import load_dotenv
+
 from langchain_openai import ChatOpenAI
 from typing import List, Tuple, Dict
 from nltk.stem import WordNetLemmatizer
@@ -42,20 +42,10 @@ import io
 from transformers import pipeline, logging
 from sentence_transformers import SentenceTransformer
 from pathlib import Path
-# Καθορισμός του path για το .env αρχείο
-env_path = Path("C:/Users/georg/.env")
+import streamlit as st
 
-# Φόρτωση του .env αρχείου
-if not load_dotenv(dotenv_path=env_path):
-    raise FileNotFoundError(f"Το αρχείο .env δεν βρέθηκε στο {env_path}. Βεβαιωθείτε ότι υπάρχει και είναι σωστά μορφοποιημένο.")
-
-# Ανάκτηση του OpenAI API Key
-openai_api_key = os.getenv("OPENAI_API_KEY")
-
-# Έλεγχος αν φορτώθηκε το API key
-if not openai_api_key:
-    raise ValueError("Το OpenAI API Key δεν φορτώθηκε από το .env αρχείο. Ελέγξτε το αρχείο .env.")
-
+# Από τα secrets του Streamlit
+openai_api_key = st.secrets["OPENAI_API_KEY"]
 
 
 # Αρχικοποίηση μοντέλου περίληψης
