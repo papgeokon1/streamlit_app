@@ -1,7 +1,6 @@
 streamlit
 langchain
 langchain-openai
-langchain-community
 pydantic
 nltk
 spacy
@@ -21,6 +20,5 @@ pandas
 rank-bm25
 deepeval
 diskcache
-networkxp
+networkx
 joblib
-curated-tokenizers
