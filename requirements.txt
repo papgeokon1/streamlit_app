@@ -21,5 +21,6 @@ pandas
 rank-bm25
 deepeval
 diskcache
-networkx
+networkxp
 joblib
+curated-tokenizers
