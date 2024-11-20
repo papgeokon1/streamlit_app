@@ -20,4 +20,3 @@ pdfminer.six
 pandas
 rank-bm25
 deepeval
-fitz
