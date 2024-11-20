@@ -21,3 +21,5 @@ pandas
 rank-bm25
 deepeval
 diskcache
+networkx
+joblib
