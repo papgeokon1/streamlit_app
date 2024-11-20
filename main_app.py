@@ -135,22 +135,10 @@ if st.button("Run Query"):
     if not (pdf_files or json_files or jsonl_files or html_files or csv_files or txt_files or urls or direct_txt_content) or not query:
         st.error("Please upload PDF, JSON, JSONL, HTML, CSV, or TXT files, provide URLs, and input a query.")
     else:
-        # Start profiling
-        pr = cProfile.Profile()
-        pr.enable()
+
 
         # Run the RAG model
         run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query)
-
-        # Stop profiling
-        pr.disable()
-        
-        # Output profiling results
-        s = io.StringIO()
-        ps = pstats.Stats(pr, stream=s).sort_stats(pstats.SortKey.CUMULATIVE)
-        ps.print_stats()
-        st.text("Profiling Results:")
-        st.text(s.getvalue())
 
     # Clean up temporary files
     for pdf_path in pdf_files:
