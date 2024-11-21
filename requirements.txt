@@ -22,3 +22,5 @@ deepeval
 diskcache
 networkx
 joblib
+# Χρησιμοποίησε την ελαφρύτερη έκδοση του spacy:
+spacy[transformers]==3.5.0
