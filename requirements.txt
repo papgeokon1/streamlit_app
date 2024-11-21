@@ -19,8 +19,8 @@ deepeval
 diskcache
 networkx
 joblib
-thinc==8.1.0
 transformers==4.30.0
 tokenizers==0.13.3
 sentence-transformers
+thinc==8.2.5
 spacy==3.5.0 --only-binary=:all:
