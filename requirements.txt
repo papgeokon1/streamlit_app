@@ -3,8 +3,8 @@ langchain
 langchain-openai
 pydantic
 nltk
-spacy
-transformers==4.46.3
+spacy[transformers]==3.5.0
+transformers==4.30.0
 tokenizers==0.20.3
 sentence-transformers
 openai
@@ -23,5 +23,3 @@ deepeval
 diskcache
 networkx
 joblib
-# Χρησιμοποίησε την ελαφρύτερη έκδοση του spacy:
-spacy[transformers]==3.5.0
