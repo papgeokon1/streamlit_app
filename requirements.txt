@@ -20,7 +20,7 @@ diskcache
 networkx
 joblib
 thinc==8.1.0
-spacy==3.5.0
 transformers==4.30.0
 tokenizers==0.13.3
 sentence-transformers
+spacy==3.5.0
