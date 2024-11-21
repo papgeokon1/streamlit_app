@@ -19,7 +19,7 @@ deepeval
 diskcache
 networkx
 joblib
-transformers==4.30.0
+transformers==4.46.1
 tokenizers==0.20.3
 sentence-transformers
 spacy==3.7.0 
