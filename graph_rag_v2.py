@@ -259,10 +259,10 @@ class KnowledgeGraph:
 
     def _load_spacy_model(self):
         try:
-            return spacy.load("en_core_web_sm")
+            return spacy.load("./models/en_core_web_sm")
         except OSError:
-            download("en_core_web_sm")
-            return spacy.load("en_core_web_sm")
+            raise RuntimeError("Failed to load the en_core_web_sm model.")
+
 
     def _extract_concepts_and_entities(self, content, llm):
         if content in self.concept_cache:
