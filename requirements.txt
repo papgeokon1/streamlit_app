@@ -4,7 +4,8 @@ langchain-openai
 pydantic
 nltk
 spacy
-transformers
+transformers==4.46.3
+tokenizers==0.20.3
 sentence-transformers
 openai
 keybert
