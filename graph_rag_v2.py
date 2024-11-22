@@ -141,6 +141,9 @@ class DocumentProcessor:
 class Concepts(BaseModel):
     concepts_list: List[str] = Field(description="List of concepts")
 
+import shutil
+import tempfile
+
 class KnowledgeGraph:
     def __init__(self, graph_filepath='graph.pkl', embeddings_filepath='embeddings.pkl', concept_cache_filepath='concept_cache.pkl'):
         self.graph_filepath = graph_filepath
@@ -258,13 +261,18 @@ class KnowledgeGraph:
                     print(f"Error in concept extraction for node {node}: {e}")
 
     def _load_spacy_model(self):
-        import spacy
         try:
-            # Φόρτωση του μοντέλου από τον τοπικό φάκελο
-            return spacy.load(os.path.join(os.getcwd(), "models/en_core_web_sm/en_core_web_sm"))
+            temp_dir = tempfile.mkdtemp()
+            model_path = "./models/en_core_web_sm/en_core_web_sm"
+            temp_model_path = os.path.join(temp_dir, "en_core_web_sm")
 
-        except OSError:
-            raise RuntimeError("Failed to load the en_core_web_sm model from the models directory.")
+            # Αντιγραφή του μοντέλου σε προσωρινό φάκελο
+            shutil.copytree(model_path, temp_model_path)
+
+            # Φόρτωση του μοντέλου από τον προσωρινό φάκελο
+            return spacy.load(temp_model_path)
+        except Exception as e:
+            raise RuntimeError(f"Failed to load the en_core_web_sm model: {e}")
 
 
     def _extract_concepts_and_entities(self, content, llm):
