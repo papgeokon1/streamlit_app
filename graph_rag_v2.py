@@ -263,12 +263,11 @@ class KnowledgeGraph:
 
     def _load_spacy_model(self):
         try:
-            # Φόρτωση του μοντέλου από το path στα secrets
-            model_path = st.secrets["models"]["spacy_model_path"]
+            # Καθορισμός του path για το μοντέλο
+            model_path = os.path.join("models", "en_core_web_sm")
             return spacy.load(model_path)
         except OSError:
-            raise RuntimeError("Failed to load the en_core_web_sm model from the path provided in st.secrets.")
-
+            raise RuntimeError("Failed to load the en_core_web_sm model from the specified path.")
 
     def _extract_concepts_and_entities(self, content, llm):
         if content in self.concept_cache:
