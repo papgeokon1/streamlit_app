@@ -260,19 +260,16 @@ class KnowledgeGraph:
                 except Exception as e:
                     print(f"Error in concept extraction for node {node}: {e}")
 
+
     def _load_spacy_model(self):
         try:
-            temp_dir = tempfile.mkdtemp()
-            model_path = "./models/en_core_web_sm/en_core_web_sm"
-            temp_model_path = os.path.join(temp_dir, "en_core_web_sm")
-
-            # Αντιγραφή του μοντέλου σε προσωρινό φάκελο
-            shutil.copytree(model_path, temp_model_path)
-
-            # Φόρτωση του μοντέλου από τον προσωρινό φάκελο
-            return spacy.load(temp_model_path)
-        except Exception as e:
-            raise RuntimeError(f"Failed to load the en_core_web_sm model: {e}")
+            # Δοκίμασε να φορτώσεις το μοντέλο
+            return spacy.load("en_core_web_sm")
+        except OSError:
+            # Αν δεν υπάρχει, κατέβασε το και φόρτωσε το
+            from spacy.cli import download
+            download("en_core_web_sm")
+            return spacy.load("en_core_web_sm")
 
 
     def _extract_concepts_and_entities(self, content, llm):
