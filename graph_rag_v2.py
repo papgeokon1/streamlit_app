@@ -258,13 +258,12 @@ class KnowledgeGraph:
                     print(f"Error in concept extraction for node {node}: {e}")
 
     def _load_spacy_model(self):
+        import spacy
         try:
-            # Προσπάθησε να φορτώσεις το μοντέλο
-            return spacy.load("en_core_web_sm")
+            # Φόρτωση του μοντέλου από τον τοπικό φάκελο
+            return spacy.load("./models/en_core_web_sm")
         except OSError:
-            # Αν δεν υπάρχει, κατέβασέ το και φόρτωσέ το
-            download("en_core_web_sm")
-            return spacy.load("en_core_web_sm")
+            raise RuntimeError("Failed to load the en_core_web_sm model from the models directory.")
 
 
     def _extract_concepts_and_entities(self, content, llm):
