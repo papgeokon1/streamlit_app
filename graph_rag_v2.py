@@ -265,8 +265,14 @@ class KnowledgeGraph:
         try:
             # Καθορισμός του path για το μοντέλο
             model_path = os.path.join("models", "en_core_web_sm")
+            
+            print(f"Checking path: {os.path.exists('./models/en_core_web_sm')}")
+       
+            print(f"Permissions for model folder: {os.access('./models/en_core_web_sm', os.R_OK)}")
+
             return spacy.load(model_path)
-        except OSError:
+        except Exception as e:
+            print(f"Error details: {e}")    
             raise RuntimeError("Failed to load the en_core_web_sm model from the specified path.")
 
     def _extract_concepts_and_entities(self, content, llm):
