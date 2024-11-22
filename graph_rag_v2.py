@@ -264,11 +264,11 @@ class KnowledgeGraph:
     def _load_spacy_model(self):
         try:
             # Καθορισμός του path για το μοντέλο
-            model_path = os.path.join("models", "en_core_web_sm")
+            model_path = os.path.join("models", "en_core_web_sm", "en_core_web_sm-3.7.1")
             
-            print(f"Checking path: {os.path.exists('./models/en_core_web_sm')}")
+            print(f"Checking path: {os.path.exists('./models/en_core_web_sm/en_core_web_sm-3.7.1')}")
        
-            print(f"Permissions for model folder: {os.access('./models/en_core_web_sm', os.R_OK)}")
+            print(f"Permissions for model folder: {os.access('./models/en_core_web_sm/en_core_web_sm-3.7.1', os.R_OK)}")
 
             return spacy.load(model_path)
         except Exception as e:
