@@ -263,8 +263,8 @@ class KnowledgeGraph:
 
     def _load_spacy_model(self):
         try:
-            # Δοκίμασε να φορτώσεις το μοντέλο
-            return spacy.load("en_core_web_sm")
+            print(os.path.exists("./models/en_core_web_sm"))
+            return spacy.load("./models/en_core_web_sm")
         except OSError:
             # Αν δεν υπάρχει, κατέβασε το και φόρτωσε το
             from spacy.cli import download
