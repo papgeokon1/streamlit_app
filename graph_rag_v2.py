@@ -261,7 +261,7 @@ class KnowledgeGraph:
         import spacy
         try:
             # Φόρτωση του μοντέλου από τον τοπικό φάκελο
-            return spacy.load("./models/en_core_web_sm")
+            return spacy.load(".models/en_core_web_sm/en_core_web_sm")
         except OSError:
             raise RuntimeError("Failed to load the en_core_web_sm model from the models directory.")
 
