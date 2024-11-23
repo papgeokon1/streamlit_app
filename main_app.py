@@ -7,8 +7,9 @@ import pandas as pd
 from datetime import datetime
 from self_rag import SelfRAG 
 from graph_rag_v2 import GraphRAG 
-import cProfile
-import pstats
+from datasets import load_dataset
+
+
 import io
 
 # Function to run async functions synchronously
@@ -29,6 +30,11 @@ def clear_database():
 st.title("RAG Assistant")
 # Choose RAG Model
 rag_option = st.selectbox("Choose RAG Model", ("Self RAG", "Graph RAG"))
+
+@st.cache
+def load_law_stackexchange():
+    dataset = load_dataset("ymoslem/Law-StackExchange")
+    return dataset
 
 # Clear Database Button
 if st.button("Clear Database"):
@@ -57,18 +63,41 @@ direct_txt_content = st.text_area("Write your TXT content here:")
 # Input URLs
 url_input = st.text_area("Enter URLs (one per line)", "")
 
+use_dataset = st.checkbox("Use Law-StackExchange Dataset")
+if use_dataset:
+    st.write("Loading dataset...")
+    dataset = load_law_stackexchange()
+    st.success("Dataset loaded successfully.")
+    st.write(dataset)
+
 # User query input
 query = st.text_input("Enter your query:")
+
 
 # Function to handle RAG model execution
 def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query):
     if rag_option == "Self RAG":
         rag = SelfRAG(urls=urls, pdf_files=pdf_files, json_files=json_files, jsonl_files=jsonl_files, html_files=html_files, csv_files=csv_files, txt_files=txt_files, direct_txt_content=direct_txt_content)
+        if dataset:
+            dataset_context = " ".join(data['answers'] for data in dataset['train'][:10])
+            query += f"\nDataset Context:\n{dataset_context}"
         response = rag.run(query)
-        st.write(f"Response: {response}")
+        st.write(f"Response: {response}")        
     elif rag_option == "Graph RAG":
-        graph_rag = GraphRAG(urls=urls, pdf_files=pdf_files, json_files=json_files, jsonl_files=jsonl_files, html_files=html_files, csv_files=csv_files, txt_files=txt_files, direct_txt_content=direct_txt_content)
+        graph_rag = GraphRAG(
+            urls=urls,
+            pdf_files=pdf_files,
+            json_files=json_files,
+            jsonl_files=jsonl_files,
+            html_files=html_files,
+            csv_files=csv_files,
+            txt_files=txt_files,
+            direct_txt_content=direct_txt_content
+        )
         asyncio.run(graph_rag.initialize())
+        if dataset:
+            dataset_context = " ".join(data['answers'] for data in dataset['train'][:10])
+            query += f"\nDataset Context:\n{dataset_context}"
         final_answer, subgraph = graph_rag.query(query)
         st.write("Answer:")
         st.write(final_answer)
@@ -135,10 +164,8 @@ if st.button("Run Query"):
     if not (pdf_files or json_files or jsonl_files or html_files or csv_files or txt_files or urls or direct_txt_content) or not query:
         st.error("Please upload PDF, JSON, JSONL, HTML, CSV, or TXT files, provide URLs, and input a query.")
     else:
-
-
-        # Run the RAG model
-        run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query)
+        dataset = load_law_stackexchange() if use_dataset else None
+        run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query, dataset)
 
     # Clean up temporary files
     for pdf_path in pdf_files:
