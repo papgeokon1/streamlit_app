@@ -192,7 +192,7 @@ if st.button("Run Query"):
         cleaned_answers = clean_dataset(dataset) if dataset else None
 
         # Execute RAG model
-        run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query, cleaned_answers)
+        run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query, dataset)
 
     # Clean up temporary files
     for pdf_path in pdf_files:
