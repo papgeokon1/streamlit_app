@@ -43,7 +43,7 @@ from transformers import pipeline, logging
 from sentence_transformers import SentenceTransformer
 from pathlib import Path
 import streamlit as st
-
+from datasets import load_dataset
 # Από τα secrets του Streamlit
 openai_api_key = st.secrets["OPENAI_API_KEY"]
 
@@ -720,7 +720,7 @@ class Visualizer:
 
 # Define the graph RAG class
 class GraphRAG:
-    def __init__(self, urls, pdf_files, json_files=None,jsonl_files=None , html_files=None, csv_files=None,txt_files=None,direct_txt_content="",dataset=None):
+    def __init__(self, urls, pdf_files, json_files=None,jsonl_files=None , html_files=None, csv_files=None,txt_files=None,direct_txt_content="",dataset_name=None):
         self.urls = urls
         self.pdf_files = pdf_files
         self.json_files = json_files
@@ -801,11 +801,15 @@ class GraphRAG:
         # Προσθήκη άμεσου κειμένου από το text area αν υπάρχει
         if self.direct_txt_content:
             combined_content += self.direct_txt_content + "\n\n"
-        # Προσθήκη περιεχομένου από το dataset
-        if dataset:
-            print("Adding dataset content to combined content.")
-            for answer in dataset:  # Υποθέτουμε ότι το dataset είναι μια λίστα με strings
-                combined_content += answer + "\n\n"
+        
+        # Φόρτωση dataset αν δοθεί
+        if self.dataset_name:
+            print(f"Loading dataset: {self.dataset_name}")
+            dataset = self.load_dataset(self.dataset_name)
+            for data in dataset['train']:  # Υποθέτουμε ότι έχει split 'train'
+                if 'text' in data and data['text'].strip():
+                    combined_content += data['text'].strip() + "\n\n"
+                    
         # Δημιουργία του vectorstore αν υπάρχει περιεχόμενο
         if combined_content:
             self.vectorstore = encode_from_string(combined_content)

@@ -27,29 +27,6 @@ st.title("RAG Assistant")
 # Choose RAG Model
 rag_option = st.selectbox("Choose RAG Model", ("Self RAG", "Graph RAG"))
 
-# Load dataset function
-@st.cache_data
-def load_orthopedics():
-    dataset = load_dataset("caleboh/tka_tha_meta_analysis", streaming=True)
-    return dataset
-
-# Function to clean dataset
-def clean_dataset(dataset):
-    """
-    Cleans the dataset to ensure only valid content is passed to the encoding function.
-
-    Args:
-        dataset (Dataset): The loaded dataset.
-
-    Returns:
-        List[str]: A list of cleaned texts.
-    """
-    cleaned_texts = []
-    for data in dataset:
-        if 'text' in data and isinstance(data['text'], str) and data['text'].strip():
-            cleaned_texts.append(data['text'].strip())
-    return cleaned_texts
-
 # Clear Database Button
 if st.button("Clear Database"):
     clear_database()
@@ -67,18 +44,15 @@ url_input = st.text_area("Enter URLs (one per line)", "")
 # Checkbox for dataset usage
 use_dataset = st.checkbox("Use Orthopedics Dataset")
 if use_dataset:
-    st.write("Loading dataset...")
-    raw_dataset = load_orthopedics()
-    cleaned_dataset = clean_dataset(raw_dataset)
-    st.success("Dataset loaded and cleaned successfully.")
+    dataset_name = "caleboh/tka_tha_meta_analysis"
 else:
-    cleaned_dataset = None
+    dataset_name = None
 
 # User query input
 query = st.text_input("Enter your query:")
 
 # Function to handle RAG model execution
-def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query, dataset=None):
+def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query, dataset_name=None):
     if rag_option == "Self RAG":
         rag = SelfRAG(
             urls=urls,
@@ -89,7 +63,7 @@ def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_fil
             csv_files=csv_files,
             txt_files=txt_files,
             direct_txt_content=direct_txt_content,
-            dataset=dataset
+            dataset_name=dataset_name
         )
         response = rag.run(query)
         st.write(f"Response: {response}")
@@ -103,7 +77,7 @@ def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_fil
             csv_files=csv_files,
             txt_files=txt_files,
             direct_txt_content=direct_txt_content,
-            dataset=dataset
+            dataset_name=dataset_name
         )
         asyncio.run(graph_rag.initialize())
         final_answer, subgraph = graph_rag.query(query)
@@ -170,11 +144,11 @@ if st.button("Run Query"):
                 txt_files.append(temp_txt.name)
 
     # Check inputs
-    if not (pdf_files or json_files or jsonl_files or html_files or csv_files or txt_files or urls or direct_txt_content or use_dataset) or not query:
+    if not (pdf_files or json_files or jsonl_files or html_files or csv_files or txt_files or urls or direct_txt_content or dataset_name) or not query:
         st.error("Please upload files, provide URLs, or enable the dataset, and input a query.")
     else:
         # Run the RAG Model
-        run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query, cleaned_dataset)
+        run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query, dataset_name)
 
     # Clean up temporary files
     for file_path in pdf_files + json_files + jsonl_files + html_files + csv_files + txt_files:
