@@ -75,7 +75,7 @@ query = st.text_input("Enter your query:")
 
 
 # Function to handle RAG model execution
-def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query):
+def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query,dataset=None):
     if rag_option == "Self RAG":
         rag = SelfRAG(urls=urls, pdf_files=pdf_files, json_files=json_files, jsonl_files=jsonl_files, html_files=html_files, csv_files=csv_files, txt_files=txt_files, direct_txt_content=direct_txt_content)
         if dataset:
