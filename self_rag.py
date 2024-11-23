@@ -70,7 +70,7 @@ utility_prompt = PromptTemplate(
 # Define main class
 
 class SelfRAG:
-    def __init__(self, urls, pdf_files, json_files=None, jsonl_files=None, html_files=None, csv_files=None, txt_files=None, direct_txt_content="",dataset_name=None ,top_k=3):
+    def __init__(self, urls, pdf_files, json_files=None, jsonl_files=None, html_files=None, csv_files=None, txt_files=None, direct_txt_content="",dataset=None ,top_k=3):
         combined_content = ""
         tasks = []  # Λίστα για αποθήκευση των ασύγχρονων εργασιών
 
@@ -130,11 +130,11 @@ class SelfRAG:
                 
                 for pdf_doc in pdf_docs:
                     combined_content += pdf_doc.page_content + "\n\n"
-        if dataset_name:
-            print(f"Loading dataset: {dataset_name}")
-            dataset = self.load_dataset(dataset_name)
-            for data in dataset['train']:
-                combined_content += data['text'] + "\n\n"
+        # Προσθήκη περιεχομένου από το dataset
+        if dataset:
+            print("Adding dataset content to combined content.")
+            for answer in dataset:  # Υποθέτουμε ότι το dataset είναι μια λίστα με strings
+                combined_content += answer + "\n\n"
         # Δημιουργία του vectorstore αν υπάρχει περιεχόμενο
         if combined_content:
             self.vectorstore = encode_from_string(combined_content)
@@ -159,13 +159,6 @@ class SelfRAG:
         results = await asyncio.gather(*tasks, return_exceptions=True)
         return [result for result in results if isinstance(result, str)]
     
-    def load_dataset(self, dataset_name):
-        """
-        Loads a dataset directly in the class.
-        """
-        from datasets import load_dataset
-        return load_dataset(dataset_name)
-
     def run(self, query):
         print(f"\nProcessing query: {query}")
 
