@@ -73,14 +73,38 @@ if use_dataset:
 # User query input
 query = st.text_input("Enter your query:")
 
+# Function to clean dataset
+def clean_dataset(dataset):
+    """
+    Cleans the dataset to ensure only valid content is passed to the encoding function.
+
+    Args:
+        dataset (Dataset): The loaded dataset.
+
+    Returns:
+        List[str]: A list of cleaned answers.
+    """
+    cleaned_answers = []
+    for data in dataset['train']:
+        if 'answers' in data and isinstance(data['answers'], str) and data['answers'].strip():
+            # Keep only non-empty and valid answers
+            cleaned_answers.append(data['answers'].strip())
+    return cleaned_answers
 
 # Function to handle RAG model execution
-def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query,dataset=None):
+def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query, dataset=None):
     if rag_option == "Self RAG":
-        rag = SelfRAG(urls=urls, pdf_files=pdf_files, json_files=json_files, jsonl_files=jsonl_files, html_files=html_files, csv_files=csv_files, txt_files=txt_files, direct_txt_content=direct_txt_content)
-        if dataset:
-            dataset_context = " ".join(data['answers'] for data in dataset['train'][:10])
-            query += f"\nDataset Context:\n{dataset_context}"
+        rag = SelfRAG(
+            urls=urls,
+            pdf_files=pdf_files,
+            json_files=json_files,
+            jsonl_files=jsonl_files,
+            html_files=html_files,
+            csv_files=csv_files,
+            txt_files=txt_files,
+            direct_txt_content=direct_txt_content,
+            dataset=dataset
+        )
         response = rag.run(query)
         st.write(f"Response: {response}")        
     elif rag_option == "Graph RAG":
@@ -92,12 +116,10 @@ def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_fil
             html_files=html_files,
             csv_files=csv_files,
             txt_files=txt_files,
-            direct_txt_content=direct_txt_content
+            direct_txt_content=direct_txt_content,
+            dataset=dataset
         )
         asyncio.run(graph_rag.initialize())
-        if dataset:
-            dataset_context = " ".join(data['answers'] for data in dataset['train'][:10])
-            query += f"\nDataset Context:\n{dataset_context}"
         final_answer, subgraph = graph_rag.query(query)
         st.write("Answer:")
         st.write(final_answer)
@@ -161,41 +183,16 @@ if st.button("Run Query"):
                 temp_txt.write(txt_file.read())
                 txt_files.append(temp_txt.name)
 
-    def clean_dataset(dataset):
-        """
-        Cleans the dataset to ensure only valid content is passed to the encoding function.
-
-        Args:
-            dataset (Dataset): The loaded dataset.
-
-        Returns:
-            List[str]: A list of cleaned answers.
-        """
-        cleaned_answers = []
-        for data in dataset['train']:
-            if 'answers' in data and isinstance(data['answers'], str) and data['answers'].strip():
-                # Keep only non-empty and valid answers
-                cleaned_answers.append(data['answers'].strip())
-        return cleaned_answers
-
-
-    # Εκτέλεση του Query
+    # Check inputs
     if not (pdf_files or json_files or jsonl_files or html_files or csv_files or txt_files or urls or direct_txt_content or use_dataset) or not query:
         st.error("Please upload PDF, JSON, JSONL, HTML, CSV, or TXT files, provide URLs, or enable the dataset, and input a query.")
     else:
-        # Φορτώνουμε το dataset αν έχει ενεργοποιηθεί
+        # Load and clean dataset
         dataset = load_law_stackexchange() if use_dataset else None
         cleaned_answers = clean_dataset(dataset) if dataset else None
 
-        # Δημιουργία context από το dataset
-        if cleaned_answers:
-            st.write("Using cleaned dataset for context.")
-            dataset_context = " ".join(cleaned_answers[:10])  # Χρήση των πρώτων 10 απαντήσεων
-            query += f"\nDataset Context:\n{dataset_context}"
-
-        # Εκτέλεση του RAG Model
-        run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query, dataset)
-
+        # Execute RAG model
+        run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query, cleaned_answers)
 
     # Clean up temporary files
     for pdf_path in pdf_files:

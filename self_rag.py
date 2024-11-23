@@ -1,14 +1,26 @@
 import os
 import sys
-import streamlit as st
+from dotenv import load_dotenv
 from langchain.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
 from pydantic.v1 import BaseModel, Field
 from langchain_community.document_loaders import PDFMinerLoader
 import asyncio
+from pathlib import Path
 
-# Από τα secrets του Streamlit
-openai_api_key = st.secrets["OPENAI_API_KEY"]
+# Καθορισμός του path για το .env αρχείο
+env_path = Path("C:/Users/georg/.env")
+
+# Φόρτωση του .env αρχείου
+if not load_dotenv(dotenv_path=env_path):
+    raise FileNotFoundError(f"Το αρχείο .env δεν βρέθηκε στο {env_path}. Βεβαιωθείτε ότι υπάρχει και είναι σωστά μορφοποιημένο.")
+
+# Ανάκτηση του OpenAI API Key
+openai_api_key = os.getenv("OPENAI_API_KEY")
+
+# Έλεγχος αν φορτώθηκε το API key
+if not openai_api_key:
+    raise ValueError("Το OpenAI API Key δεν φορτώθηκε από το .env αρχείο. Ελέγξτε το αρχείο .env.")
 
 
 sys.path.append(os.path.abspath(
@@ -70,7 +82,7 @@ utility_prompt = PromptTemplate(
 # Define main class
 
 class SelfRAG:
-    def __init__(self, urls, pdf_files, json_files=None, jsonl_files=None, html_files=None, csv_files=None, txt_files=None, direct_txt_content="", top_k=3):
+    def __init__(self, urls, pdf_files, json_files=None, jsonl_files=None, html_files=None, csv_files=None, txt_files=None, direct_txt_content="",dataset=None ,top_k=3):
         combined_content = ""
         tasks = []  # Λίστα για αποθήκευση των ασύγχρονων εργασιών
 
@@ -130,7 +142,11 @@ class SelfRAG:
                 
                 for pdf_doc in pdf_docs:
                     combined_content += pdf_doc.page_content + "\n\n"
-
+        # Προσθήκη περιεχομένου από το dataset
+        if dataset:
+            print("Adding dataset content to combined content.")
+            for answer in dataset:  # Υποθέτουμε ότι το dataset είναι μια λίστα με strings
+                combined_content += answer + "\n\n"
         # Δημιουργία του vectorstore αν υπάρχει περιεχόμενο
         if combined_content:
             self.vectorstore = encode_from_string(combined_content)
@@ -150,9 +166,10 @@ class SelfRAG:
 
     async def _fetch_all_contents(self, tasks):
         """
-        Εκτελεί όλες τις εργασίες ανάκτησης περιεχομένου παράλληλα και επιστρέφει τα αποτελέσματα.
+        Εκτέλεση όλων των ασύγχρονων εργασιών.
         """
-        return await asyncio.gather(*tasks)
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        return [result for result in results if isinstance(result, str)]
     
     def run(self, query):
         print(f"\nProcessing query: {query}")

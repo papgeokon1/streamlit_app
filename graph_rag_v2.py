@@ -720,7 +720,7 @@ class Visualizer:
 
 # Define the graph RAG class
 class GraphRAG:
-    def __init__(self, urls, pdf_files, json_files=None,jsonl_files=None , html_files=None, csv_files=None,txt_files=None,direct_txt_content=""):
+    def __init__(self, urls, pdf_files, json_files=None,jsonl_files=None , html_files=None, csv_files=None,txt_files=None,direct_txt_content="",dataset=None):
         self.urls = urls
         self.pdf_files = pdf_files
         self.json_files = json_files
@@ -729,6 +729,7 @@ class GraphRAG:
         self.csv_files = csv_files
         self.txt_files=txt_files
         self.direct_txt_content=direct_txt_content
+        self.dataset = dataset 
         self.vectorstore = None
         self.llm = ChatOpenAI(temperature=0, model_name="gpt-4o-mini", max_tokens=4000)
         self.embedding_model = OpenAIEmbeddings()
@@ -800,6 +801,12 @@ class GraphRAG:
         # Προσθήκη άμεσου κειμένου από το text area αν υπάρχει
         if self.direct_txt_content:
             combined_content += self.direct_txt_content + "\n\n"
+        # Προσθήκη δεδομένων από το dataset
+        
+        if self.dataset:
+            print("Adding dataset content to combined content.")
+            for answer in self.dataset:  # Υποθέτουμε ότι το dataset είναι μια λίστα από strings
+                combined_content += answer + "\n\n"
 
         # Δημιουργία του vectorstore αν υπάρχει περιεχόμενο
         if combined_content:
