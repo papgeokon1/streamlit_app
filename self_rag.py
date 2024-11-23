@@ -133,7 +133,7 @@ class SelfRAG:
         # Προσθήκη περιεχομένου από το dataset
         if dataset_name:
             print(f"Loading dataset: {dataset_name}")
-            dataset = self.load_dataset(dataset_name)
+            dataset = load_dataset(dataset_name)
             for data in dataset['train']:  # Υποθέτουμε ότι έχει split 'train'
                 if 'text' in data and data['text'].strip():
                     combined_content += data['text'].strip() + "\n\n"

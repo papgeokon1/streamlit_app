@@ -729,7 +729,7 @@ class GraphRAG:
         self.csv_files = csv_files
         self.txt_files=txt_files
         self.direct_txt_content=direct_txt_content
-        self.dataset = dataset 
+        self.dataset_name = dataset_name 
         self.vectorstore = None
         self.llm = ChatOpenAI(temperature=0, model_name="gpt-4o-mini", max_tokens=4000)
         self.embedding_model = OpenAIEmbeddings()
@@ -809,7 +809,7 @@ class GraphRAG:
             for data in dataset['train']:  # Υποθέτουμε ότι έχει split 'train'
                 if 'text' in data and data['text'].strip():
                     combined_content += data['text'].strip() + "\n\n"
-                    
+
         # Δημιουργία του vectorstore αν υπάρχει περιεχόμενο
         if combined_content:
             self.vectorstore = encode_from_string(combined_content)
