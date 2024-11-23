@@ -36,6 +36,27 @@ def load_law_stackexchange():
     dataset = load_dataset("ymoslem/Law-StackExchange")
     return dataset
 
+@st.cache_data
+def load_pile_of_law():
+    dataset = load_dataset("pile-of-law/pile-of-law")
+    return dataset
+
+def clean_pile_of_law(dataset):
+    """
+    Cleans and selects a subset of the Pile of Law dataset.
+
+    Args:
+        dataset (Dataset): The loaded dataset.
+
+    Returns:
+        List[str]: A list of cleaned legal texts.
+    """
+    cleaned_texts = []
+    for data in dataset['train']:
+        if 'text' in data and isinstance(data['text'], str) and data['text'].strip():
+            cleaned_texts.append(data['text'].strip())
+    return cleaned_texts[:10] 
+
 # Clear Database Button
 if st.button("Clear Database"):
     clear_database()
@@ -69,6 +90,13 @@ if use_dataset:
     dataset = load_law_stackexchange()
     st.success("Dataset loaded successfully.")
     st.write(dataset)
+
+use_pile_of_law = st.checkbox("Use Pile of Law Dataset")
+if use_pile_of_law:
+    st.write("Loading Pile of Law dataset...")
+    pile_of_law_dataset = load_pile_of_law()
+    st.success("Pile of Law dataset loaded successfully.")
+    st.write(pile_of_law_dataset)
 
 # User query input
 query = st.text_input("Enter your query:")
@@ -184,15 +212,26 @@ if st.button("Run Query"):
                 txt_files.append(temp_txt.name)
 
     # Check inputs
-    if not (pdf_files or json_files or jsonl_files or html_files or csv_files or txt_files or urls or direct_txt_content or use_dataset) or not query:
+    if not (pdf_files or json_files or jsonl_files or html_files or csv_files or txt_files or urls or direct_txt_content or use_dataset or use_pile_of_law) or not query:
         st.error("Please upload PDF, JSON, JSONL, HTML, CSV, or TXT files, provide URLs, or enable the dataset, and input a query.")
     else:
         # Load and clean dataset
         dataset = load_law_stackexchange() if use_dataset else None
+        pile_of_law_dataset = load_pile_of_law() if use_pile_of_law else None
         cleaned_answers = clean_dataset(dataset) if dataset else None
 
-        # Execute RAG model
-        run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query, dataset)
+    # Συνένωση των δεδομένων αν υπάρχουν
+    combined_context = ""
+    if dataset:
+        combined_context += " ".join(dataset)
+    if pile_of_law_dataset:
+        combined_context += " ".join(pile_of_law_dataset)
+
+    if combined_context:
+        query += f"\nDataset Context:\n{combined_context}"
+
+    # Εκτέλεση του RAG Model
+    run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query, combined_context)
 
     # Clean up temporary files
     for pdf_path in pdf_files:
