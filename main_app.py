@@ -3,13 +3,9 @@ from io import BytesIO
 import tempfile
 import asyncio
 import os
-import pandas as pd
-from datetime import datetime
-from self_rag import SelfRAG 
-from graph_rag_v2 import GraphRAG 
 from datasets import load_dataset
-
-
+from self_rag import SelfRAG
+from graph_rag_v2 import GraphRAG
 import io
 
 # Function to run async functions synchronously
@@ -31,49 +27,11 @@ st.title("RAG Assistant")
 # Choose RAG Model
 rag_option = st.selectbox("Choose RAG Model", ("Self RAG", "Graph RAG"))
 
+# Load dataset function
 @st.cache_data
 def load_orthopedics():
     dataset = load_dataset("caleboh/tka_tha_meta_analysis", streaming=True)
     return dataset
-
-
-
-# Clear Database Button
-if st.button("Clear Database"):
-    clear_database()
-# Upload PDF files
-uploaded_pdfs = st.file_uploader("Upload PDF files", type="pdf", accept_multiple_files=True)
-
-# Upload JSONL files
-uploaded_jsonls = st.file_uploader("Upload JSONL files", type="jsonl", accept_multiple_files=True)
-
-# Upload JSON files
-uploaded_jsons = st.file_uploader("Upload JSON files", type="json", accept_multiple_files=True)
-
-# Upload HTML files
-uploaded_htmls = st.file_uploader("Upload HTML files", type="html", accept_multiple_files=True)
-
-# Upload CSV files
-uploaded_csvs = st.file_uploader("Upload CSV files", type="csv", accept_multiple_files=True)
-
-# Upload TXT files
-uploaded_txts = st.file_uploader("Upload TXT files", type="txt", accept_multiple_files=True)
-
-# Directly inputted TXT content
-direct_txt_content = st.text_area("Write your TXT content here:")
-
-# Input URLs
-url_input = st.text_area("Enter URLs (one per line)", "")
-
-use_dataset = st.checkbox("Use Orthopedics Dataset")
-if use_dataset:
-    st.write("Loading dataset...")
-    dataset = load_orthopedics()
-    st.success("Dataset loaded successfully.")
-    st.write(dataset)
-
-# User query input
-query = st.text_input("Enter your query:")
 
 # Function to clean dataset
 def clean_dataset(dataset):
@@ -84,14 +42,40 @@ def clean_dataset(dataset):
         dataset (Dataset): The loaded dataset.
 
     Returns:
-        List[str]: A list of cleaned answers.
+        List[str]: A list of cleaned texts.
     """
-    cleaned_answers = []
-    for data in dataset['train']:
-        if 'answers' in data and isinstance(data['answers'], str) and data['answers'].strip():
-            # Keep only non-empty and valid answers
-            cleaned_answers.append(data['answers'].strip())
-    return cleaned_answers
+    cleaned_texts = []
+    for data in dataset:
+        if 'text' in data and isinstance(data['text'], str) and data['text'].strip():
+            cleaned_texts.append(data['text'].strip())
+    return cleaned_texts
+
+# Clear Database Button
+if st.button("Clear Database"):
+    clear_database()
+
+# File uploaders for different formats
+uploaded_pdfs = st.file_uploader("Upload PDF files", type="pdf", accept_multiple_files=True)
+uploaded_jsonls = st.file_uploader("Upload JSONL files", type="jsonl", accept_multiple_files=True)
+uploaded_jsons = st.file_uploader("Upload JSON files", type="json", accept_multiple_files=True)
+uploaded_htmls = st.file_uploader("Upload HTML files", type="html", accept_multiple_files=True)
+uploaded_csvs = st.file_uploader("Upload CSV files", type="csv", accept_multiple_files=True)
+uploaded_txts = st.file_uploader("Upload TXT files", type="txt", accept_multiple_files=True)
+direct_txt_content = st.text_area("Write your TXT content here:")
+url_input = st.text_area("Enter URLs (one per line)", "")
+
+# Checkbox for dataset usage
+use_dataset = st.checkbox("Use Orthopedics Dataset")
+if use_dataset:
+    st.write("Loading dataset...")
+    raw_dataset = load_orthopedics()
+    cleaned_dataset = clean_dataset(raw_dataset)
+    st.success("Dataset loaded and cleaned successfully.")
+else:
+    cleaned_dataset = None
+
+# User query input
+query = st.text_input("Enter your query:")
 
 # Function to handle RAG model execution
 def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query, dataset=None):
@@ -108,7 +92,7 @@ def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_fil
             dataset=dataset
         )
         response = rag.run(query)
-        st.write(f"Response: {response}")        
+        st.write(f"Response: {response}")
     elif rag_option == "Graph RAG":
         graph_rag = GraphRAG(
             urls=urls,
@@ -186,25 +170,12 @@ if st.button("Run Query"):
                 txt_files.append(temp_txt.name)
 
     # Check inputs
-    if not (pdf_files or json_files or jsonl_files or html_files or csv_files or txt_files or urls or direct_txt_content or use_dataset ) or not query:
-        st.error("Please upload PDF, JSON, JSONL, HTML, CSV, or TXT files, provide URLs, or enable the dataset, and input a query.")
+    if not (pdf_files or json_files or jsonl_files or html_files or csv_files or txt_files or urls or direct_txt_content or use_dataset) or not query:
+        st.error("Please upload files, provide URLs, or enable the dataset, and input a query.")
     else:
-        # Load and clean dataset
-        dataset = load_orthopedics() if use_dataset else None
-          # Εκτέλεση του RAG Model
-    run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query, dataset)
-
+        # Run the RAG Model
+        run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query, cleaned_dataset)
 
     # Clean up temporary files
-    for pdf_path in pdf_files:
-        os.remove(pdf_path)
-    for json_path in json_files:
-        os.remove(json_path)
-    for jsonl_path in jsonl_files:
-        os.remove(jsonl_path)
-    for html_path in html_files:
-        os.remove(html_path)
-    for csv_path in csv_files:
-        os.remove(csv_path)
-    for txt_path in txt_files:
-        os.remove(txt_path)
+    for file_path in pdf_files + json_files + jsonl_files + html_files + csv_files + txt_files:
+        os.remove(file_path)

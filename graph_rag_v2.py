@@ -720,7 +720,7 @@ class Visualizer:
 
 # Define the graph RAG class
 class GraphRAG:
-    def __init__(self, urls, pdf_files, json_files=None,jsonl_files=None , html_files=None, csv_files=None,txt_files=None,direct_txt_content="",dataset=None):
+    def __init__(self, urls, pdf_files, json_files=None,jsonl_files=None , html_files=None, csv_files=None,txt_files=None,direct_txt_content="",dataset_name=None):
         self.urls = urls
         self.pdf_files = pdf_files
         self.json_files = json_files
@@ -803,10 +803,12 @@ class GraphRAG:
             combined_content += self.direct_txt_content + "\n\n"
         # Προσθήκη δεδομένων από το dataset
         
-        if self.dataset:
-            print("Adding dataset content to combined content.")
-            for answer in self.dataset:  # Υποθέτουμε ότι το dataset είναι μια λίστα από strings
-                combined_content += answer + "\n\n"
+        # Φόρτωση dataset στο σώμα της κλάσης
+        if self.dataset_name:
+            print(f"Loading dataset: {self.dataset_name}")
+            dataset = self.load_dataset(self.dataset_name)
+            for data in dataset['train']:
+                combined_content += data['text'] + "\n\n"
 
         # Δημιουργία του vectorstore αν υπάρχει περιεχόμενο
         if combined_content:
@@ -821,7 +823,15 @@ class GraphRAG:
         Εκτελεί όλες τις εργασίες ανάκτησης περιεχομένου παράλληλα και επιστρέφει τα αποτελέσματα.
         """
         return await asyncio.gather(*tasks)
-        
+
+
+    def load_dataset(self, dataset_name):
+        """
+        Loads a dataset directly in the class.
+        """
+        from datasets import load_dataset
+        return load_dataset(dataset_name)
+
     def process_documents(self, content: str):
         """
         Processes the combined content by splitting it into chunks, embedding them, and building a knowledge graph.
