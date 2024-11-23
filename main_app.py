@@ -38,7 +38,7 @@ def load_law_stackexchange():
 
 @st.cache_data
 def load_pile_of_law():
-    dataset = load_dataset("pile-of-law/pile-of-law")
+    dataset = load_dataset("pile-of-law/pile-of-law",trust_remote_code=True)
     return dataset
 
 def clean_pile_of_law(dataset):
