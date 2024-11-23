@@ -31,7 +31,7 @@ st.title("RAG Assistant")
 # Choose RAG Model
 rag_option = st.selectbox("Choose RAG Model", ("Self RAG", "Graph RAG"))
 
-@st.cache
+@st.cache_data
 def load_law_stackexchange():
     dataset = load_dataset("ymoslem/Law-StackExchange")
     return dataset
