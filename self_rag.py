@@ -1,26 +1,14 @@
 import os
 import sys
-from dotenv import load_dotenv
 from langchain.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
 from pydantic.v1 import BaseModel, Field
 from langchain_community.document_loaders import PDFMinerLoader
 import asyncio
-from pathlib import Path
+import streamlit as st
 
-# Καθορισμός του path για το .env αρχείο
-env_path = Path("C:/Users/georg/.env")
-
-# Φόρτωση του .env αρχείου
-if not load_dotenv(dotenv_path=env_path):
-    raise FileNotFoundError(f"Το αρχείο .env δεν βρέθηκε στο {env_path}. Βεβαιωθείτε ότι υπάρχει και είναι σωστά μορφοποιημένο.")
-
-# Ανάκτηση του OpenAI API Key
-openai_api_key = os.getenv("OPENAI_API_KEY")
-
-# Έλεγχος αν φορτώθηκε το API key
-if not openai_api_key:
-    raise ValueError("Το OpenAI API Key δεν φορτώθηκε από το .env αρχείο. Ελέγξτε το αρχείο .env.")
+# Από τα secrets του Streamlit
+openai_api_key = st.secrets["OPENAI_API_KEY"]
 
 
 sys.path.append(os.path.abspath(
