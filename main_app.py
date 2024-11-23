@@ -161,7 +161,7 @@ if st.button("Run Query"):
                 temp_txt.write(txt_file.read())
                 txt_files.append(temp_txt.name)
 
-    if not (pdf_files or json_files or jsonl_files or html_files or csv_files or txt_files or urls or direct_txt_content) or not query:
+    if not (pdf_files or json_files or jsonl_files or html_files or csv_files or txt_files or urls or direct_txt_content or use_dataset) or not query:
         st.error("Please upload PDF, JSON, JSONL, HTML, CSV, or TXT files, provide URLs, and input a query.")
     else:
         dataset = load_law_stackexchange() if use_dataset else None
