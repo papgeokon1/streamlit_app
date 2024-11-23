@@ -805,7 +805,7 @@ class GraphRAG:
         # Φόρτωση dataset αν δοθεί
         if self.dataset_name:
             print(f"Loading dataset: {self.dataset_name}")
-            dataset = self.load_dataset(self.dataset_name)
+            dataset = self.load_dataset("caleboh/tka_tha_meta_analysis")
             for data in dataset['train']:  # Υποθέτουμε ότι έχει split 'train'
                 if 'text' in data and data['text'].strip():
                     combined_content += data['text'].strip() + "\n\n"
