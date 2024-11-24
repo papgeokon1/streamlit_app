@@ -76,7 +76,7 @@ else:
 
 # User query input
 query = st.text_input("Enter your query:")
-
+dataset_field = "Technological and Clinical Context"  # ή το πεδίο που επέλεξες
 # Function to handle RAG model execution
 def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query, dataset=None):
     if rag_option == "Self RAG":
@@ -89,7 +89,8 @@ def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_fil
             csv_files=csv_files,
             txt_files=txt_files,
             direct_txt_content=direct_txt_content,
-            dataset=dataset
+            dataset=dataset['train'],  # Πέρασε τα δεδομένα του split 'train'
+            dataset_field=dataset_field  # Πέρασε το πεδίο που θέλεις
         )
         response = rag.run(query)
         st.write(f"Response: {response}")

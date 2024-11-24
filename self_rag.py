@@ -70,7 +70,7 @@ utility_prompt = PromptTemplate(
 # Define main class
 
 class SelfRAG:
-    def __init__(self, urls, pdf_files, json_files=None, jsonl_files=None, html_files=None, csv_files=None, txt_files=None, direct_txt_content="",dataset=None ,top_k=3):
+    def __init__(self, urls, pdf_files, json_files=None, jsonl_files=None, html_files=None, csv_files=None, txt_files=None, direct_txt_content="",dataset=None,dataset_field="" ,top_k=3):
         combined_content = ""
         tasks = []  # Λίστα για αποθήκευση των ασύγχρονων εργασιών
 
@@ -131,17 +131,14 @@ class SelfRAG:
                 for pdf_doc in pdf_docs:
                     combined_content += pdf_doc.page_content + "\n\n"
 
+        # Επεξεργασία Dataset
         if dataset:
-            print("Dataset content:")
-            for answer in dataset:
-                print(answer)
-                if isinstance(answer, str) and answer.strip():
-                    combined_content += answer.strip() + "\n\n"
-                else:
-                    print(f"Skipping invalid dataset entry: {answer}")
-
-        if not combined_content.strip():
-            raise ValueError("The combined_content is empty. Check the dataset or other inputs.")
+            print("Processing dataset...")
+            if dataset_field:  # Επιλεγμένο πεδίο από το dataset
+                texts = [entry[dataset_field] for entry in dataset if dataset_field in entry and isinstance(entry[dataset_field], str)]
+                combined_content += "\n\n".join(texts) + "\n\n"
+            else:
+                print("No dataset field specified. Skipping dataset processing.")
 
         # Έλεγχος αν το combined_content είναι έγκυρο
         if combined_content.strip():
