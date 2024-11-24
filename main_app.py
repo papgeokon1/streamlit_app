@@ -174,7 +174,7 @@ if st.button("Run Query"):
         st.error("Please upload files, provide URLs, or enable the dataset, and input a query.")
     else:
         # Run the RAG Model
-        dataset=use_dataset
+        dataset=cleaned_dataset
         run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query, dataset)
 
     # Clean up temporary files
