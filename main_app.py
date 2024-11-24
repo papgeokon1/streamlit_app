@@ -30,7 +30,7 @@ rag_option = st.selectbox("Choose RAG Model", ("Self RAG", "Graph RAG"))
 # Load dataset function
 @st.cache_data
 def load_orthopedics():
-    dataset = load_dataset("caleboh/tka_tha_meta_analysis", streaming=True)
+    dataset = load_dataset("caleboh/tka_tha_meta_analysis",encoding="ISO-8859-1" )
     return dataset
 
 # Function to clean dataset
