@@ -89,7 +89,7 @@ def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_fil
             csv_files=csv_files,
             txt_files=txt_files,
             direct_txt_content=direct_txt_content,
-            dataset=datasetp,  # Πέρασε τα δεδομένα του split 'train'
+            dataset=dataset,  # Πέρασε τα δεδομένα του split 'train'
             dataset_field=dataset_field  # Πέρασε το πεδίο που θέλεις
         )
         response = rag.run(query)
