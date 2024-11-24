@@ -36,17 +36,17 @@ def load_orthopedics():
 # Function to clean dataset
 def clean_dataset(dataset):
     """
-    Cleans the dataset to ensure only valid content is passed to the encoding function.
+    Καθαρίζει το dataset για να διασφαλίσει ότι μόνο έγκυρα κείμενα περνούν στη διαδικασία encoding.
 
     Args:
-        dataset (Dataset): The loaded dataset.
+        dataset: Το φορτωμένο dataset.
 
     Returns:
-        List[str]: A list of cleaned texts.
+        List[str]: Μια λίστα με καθαρισμένα κείμενα.
     """
     cleaned_texts = []
     for data in dataset:
-        if 'text' in data and isinstance(data['text'], str) and data['text'].strip():
+        if isinstance(data, dict) and 'text' in data and isinstance(data['text'], str):
             cleaned_texts.append(data['text'].strip())
     return cleaned_texts
 

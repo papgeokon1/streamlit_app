@@ -130,17 +130,25 @@ class SelfRAG:
                 
                 for pdf_doc in pdf_docs:
                     combined_content += pdf_doc.page_content + "\n\n"
-        # Προσθήκη περιεχομένου από το dataset
+
         if dataset:
-            print("Adding dataset content to combined content.")
-            for answer in dataset:  # Υποθέτουμε ότι το dataset είναι μια λίστα με strings
-                combined_content += answer + "\n\n"
-        # Δημιουργία του vectorstore αν υπάρχει περιεχόμενο
-        
-        if combined_content:
-            self.vectorstore = encode_from_string(combined_content)
+            print("Adding dataset content to combined content...")
+            for answer in dataset:
+                if isinstance(answer, str) and answer.strip():
+                    combined_content += answer.strip() + "\n\n"
+                else:
+                    print(f"Invalid dataset entry: {answer}")
+
+        # Έλεγχος αν το combined_content είναι έγκυρο
+        if combined_content.strip():
+            try:
+                self.vectorstore = encode_from_string(combined_content)
+                print("Vectorstore created successfully.")
+            except Exception as e:
+                print(f"Error creating vectorstore: {e}")
+                raise
         else:
-            raise ValueError("Failed to retrieve or process the content from URLs or PDFs.")
+            raise ValueError("Combined content is empty. Cannot create vectorstore.")
 
         # Αρχικοποίηση άλλων παραμέτρων
         self.top_k = top_k
