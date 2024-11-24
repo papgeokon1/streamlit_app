@@ -132,12 +132,16 @@ class SelfRAG:
                     combined_content += pdf_doc.page_content + "\n\n"
 
         if dataset:
-            print("Adding dataset content to combined content...")
+            print("Dataset content:")
             for answer in dataset:
+                print(answer)
                 if isinstance(answer, str) and answer.strip():
                     combined_content += answer.strip() + "\n\n"
                 else:
-                    print(f"Invalid dataset entry: {answer}")
+                    print(f"Skipping invalid dataset entry: {answer}")
+
+        if not combined_content.strip():
+            raise ValueError("The combined_content is empty. Check the dataset or other inputs.")
 
         # Έλεγχος αν το combined_content είναι έγκυρο
         if combined_content.strip():
