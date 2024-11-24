@@ -720,7 +720,7 @@ class Visualizer:
 
 # Define the graph RAG class
 class GraphRAG:
-    def __init__(self, urls, pdf_files, json_files=None,jsonl_files=None , html_files=None, csv_files=None,txt_files=None,direct_txt_content="",dataset_name=None):
+    def __init__(self, urls, pdf_files, json_files=None,jsonl_files=None , html_files=None, csv_files=None,txt_files=None,direct_txt_content="",dataset=None):
         self.urls = urls
         self.pdf_files = pdf_files
         self.json_files = json_files
@@ -729,7 +729,7 @@ class GraphRAG:
         self.csv_files = csv_files
         self.txt_files=txt_files
         self.direct_txt_content=direct_txt_content
-        self.dataset_name = dataset_name 
+        self.dataset = dataset 
         self.vectorstore = None
         self.llm = ChatOpenAI(temperature=0, model_name="gpt-4o-mini", max_tokens=4000)
         self.embedding_model = OpenAIEmbeddings()
@@ -801,15 +801,11 @@ class GraphRAG:
         # Προσθήκη άμεσου κειμένου από το text area αν υπάρχει
         if self.direct_txt_content:
             combined_content += self.direct_txt_content + "\n\n"
-        
-        # Φόρτωση dataset αν δοθεί
-        if self.dataset_name:
-            print(f"Loading dataset: {self.dataset_name}")
-            dataset = self.load_dataset("caleboh/tka_tha_meta_analysis")
-            for data in dataset['train']:  # Υποθέτουμε ότι έχει split 'train'
-                if 'text' in data and data['text'].strip():
-                    combined_content += data['text'].strip() + "\n\n"
-
+        # Προσθήκη περιεχομένου από το dataset
+        if self.dataset:
+            print("Adding dataset content to combined content.")
+            for answer in self.dataset:  # Υποθέτουμε ότι το dataset είναι μια λίστα με strings
+                combined_content += answer + "\n\n"
         # Δημιουργία του vectorstore αν υπάρχει περιεχόμενο
         if combined_content:
             self.vectorstore = encode_from_string(combined_content)
