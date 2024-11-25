@@ -3,7 +3,7 @@ from io import BytesIO
 import tempfile
 import asyncio
 import os
-from datasets import load_dataset
+import json
 from self_rag import SelfRAG
 from graph_rag_v2 import GraphRAG
 import io
@@ -27,20 +27,11 @@ st.title("RAG Assistant")
 # Choose RAG Model
 rag_option = st.selectbox("Choose RAG Model", ("Self RAG", "Graph RAG"))
 
-# Load dataset function
-def load_lawstackexchange():
-    return load_dataset("ymoslem/Law-StackExchange",encoding="ISO-8859-1")
-
-# Function to clean dataset
-def extract_field_from_dataset(dataset, field=None):
-    extracted_texts = []
-    for entry in dataset:
-        if isinstance(entry, dict):
-            if field and field in entry and isinstance(entry[field], str):
-                extracted_texts.append(entry[field].strip())
-            elif not field:
-                extracted_texts.append(" ".join(str(value).strip() for value in entry.values() if isinstance(value, str)))
-    return extracted_texts
+# Function to load preprocessed Law-StackExchange dataset
+@st.cache_data
+def load_cleaned_lawstack():
+    with open("cleaned_lawstack.json", "r", encoding="utf-8") as f:
+        return json.load(f)
 
 # Clear Database Button
 if st.button("Clear Database"):
@@ -57,25 +48,13 @@ direct_txt_content = st.text_area("Write your TXT content here:")
 url_input = st.text_area("Enter URLs (one per line)", "")
 
 # Checkbox for dataset usage
-use_dataset = st.checkbox("Use Preloaded Dataset")
-dataset_field = None
-dataset = None
+use_dataset = st.checkbox("Use Preloaded Law-StackExchange Dataset")
+cleaned_dataset = None
 
 if use_dataset:
-    st.write("Loading dataset...")
-    raw_dataset = load_lawstackexchange()
-    dataset_split = raw_dataset["train"]
-
-    # Let user select a specific field or load all fields
-    all_fields = list(dataset_split.features.keys())
-    dataset_field = st.selectbox("Select a field to extract (optional)", ["All Fields"] + all_fields)
-
-    if dataset_field == "All Fields":
-        cleaned_dataset = extract_field_from_dataset(dataset_split)
-    else:
-        cleaned_dataset = extract_field_from_dataset(dataset_split, field=dataset_field)
-
-    st.success("Dataset loaded and cleaned successfully!")
+    st.write("Loading cleaned dataset...")
+    cleaned_dataset = load_cleaned_lawstack()
+    st.success("Dataset loaded successfully!")
     st.write(f"Number of entries: {len(cleaned_dataset)}")
     st.write("Preview:")
     st.write(cleaned_dataset[:5])
