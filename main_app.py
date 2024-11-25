@@ -28,9 +28,8 @@ st.title("RAG Assistant")
 rag_option = st.selectbox("Choose RAG Model", ("Self RAG", "Graph RAG"))
 
 # Load dataset function
-@st.cache_data
-def load_orthopedics():
-    return load_dataset("caleboh/tka_tha_meta_analysis", encoding="ISO-8859-1")
+def load_lawstackexchange():
+    return load_dataset("ymoslem/Law-StackExchange",encoding="ISO-8859-1")
 
 # Function to clean dataset
 def extract_field_from_dataset(dataset, field=None):
@@ -64,7 +63,7 @@ dataset = None
 
 if use_dataset:
     st.write("Loading dataset...")
-    raw_dataset = load_orthopedics()
+    raw_dataset = load_lawstackexchange()
     dataset_split = raw_dataset["train"]
 
     # Let user select a specific field or load all fields
