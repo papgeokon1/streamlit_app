@@ -48,6 +48,7 @@ from datasets import load_dataset
 openai_api_key = st.secrets["OPENAI_API_KEY"]
 
 
+
 # Αρχικοποίηση μοντέλου περίληψης
 summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
 sys.path.append(os.path.abspath(os.path.join(os.getcwd(), '..')))
@@ -801,11 +802,13 @@ class GraphRAG:
         # Προσθήκη άμεσου κειμένου από το text area αν υπάρχει
         if self.direct_txt_content:
             combined_content += self.direct_txt_content + "\n\n"
+
         # Προσθήκη περιεχομένου από το dataset
         if self.dataset:
-            print("Adding dataset content to combined content.")
-            for answer in self.dataset:  # Υποθέτουμε ότι το dataset είναι μια λίστα με strings
-                combined_content += answer + "\n\n"
+            print("Adding dataset content to combined content...")
+            for entry in self.dataset:
+                combined_content += entry + "\n\n"
+
         # Δημιουργία του vectorstore αν υπάρχει περιεχόμενο
         if combined_content:
             self.vectorstore = encode_from_string(combined_content)
@@ -819,7 +822,7 @@ class GraphRAG:
         Εκτελεί όλες τις εργασίες ανάκτησης περιεχομένου παράλληλα και επιστρέφει τα αποτελέσματα.
         """
         return await asyncio.gather(*tasks)
-        
+    
     def process_documents(self, content: str):
         """
         Processes the combined content by splitting it into chunks, embedding them, and building a knowledge graph.

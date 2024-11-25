@@ -17,38 +17,31 @@ def run_async(func, *args):
 
 # Clear Database function
 def clear_database():
-    # Logic to reset or clear RAG instances (reset embeddings, clear graphs)
     st.session_state.pop('self_rag_instance', None)
     st.session_state.pop('graph_rag_instance', None)
     st.success("Database cleared successfully.")
 
 # Streamlit App Interface
 st.title("RAG Assistant")
+
 # Choose RAG Model
 rag_option = st.selectbox("Choose RAG Model", ("Self RAG", "Graph RAG"))
 
 # Load dataset function
 @st.cache_data
 def load_orthopedics():
-    dataset = load_dataset("caleboh/tka_tha_meta_analysis",encoding="ISO-8859-1" )
-    return dataset
+    return load_dataset("caleboh/tka_tha_meta_analysis", encoding="ISO-8859-1")
 
 # Function to clean dataset
-def clean_dataset(dataset):
-    """
-    Καθαρίζει το dataset για να διασφαλίσει ότι μόνο έγκυρα κείμενα περνούν στη διαδικασία encoding.
-
-    Args:
-        dataset: Το φορτωμένο dataset.
-
-    Returns:
-        List[str]: Μια λίστα με καθαρισμένα κείμενα.
-    """
-    cleaned_texts = []
-    for data in dataset:
-        if isinstance(data, dict) and 'text' in data and isinstance(data['text'], str):
-            cleaned_texts.append(data['text'].strip())
-    return cleaned_texts
+def extract_field_from_dataset(dataset, field=None):
+    extracted_texts = []
+    for entry in dataset:
+        if isinstance(entry, dict):
+            if field and field in entry and isinstance(entry[field], str):
+                extracted_texts.append(entry[field].strip())
+            elif not field:
+                extracted_texts.append(" ".join(str(value).strip() for value in entry.values() if isinstance(value, str)))
+    return extracted_texts
 
 # Clear Database Button
 if st.button("Clear Database"):
@@ -65,18 +58,32 @@ direct_txt_content = st.text_area("Write your TXT content here:")
 url_input = st.text_area("Enter URLs (one per line)", "")
 
 # Checkbox for dataset usage
-use_dataset = st.checkbox("Use Orthopedics Dataset")
+use_dataset = st.checkbox("Use Preloaded Dataset")
+dataset_field = None
+dataset = None
+
 if use_dataset:
     st.write("Loading dataset...")
     raw_dataset = load_orthopedics()
-    cleaned_dataset = clean_dataset(raw_dataset)
-    st.success("Dataset loaded and cleaned successfully.")
-else:
-    cleaned_dataset = None
+    dataset_split = raw_dataset["train"]
+
+    # Let user select a specific field or load all fields
+    all_fields = list(dataset_split.features.keys())
+    dataset_field = st.selectbox("Select a field to extract (optional)", ["All Fields"] + all_fields)
+
+    if dataset_field == "All Fields":
+        cleaned_dataset = extract_field_from_dataset(dataset_split)
+    else:
+        cleaned_dataset = extract_field_from_dataset(dataset_split, field=dataset_field)
+
+    st.success("Dataset loaded and cleaned successfully!")
+    st.write(f"Number of entries: {len(cleaned_dataset)}")
+    st.write("Preview:")
+    st.write(cleaned_dataset[:5])
 
 # User query input
 query = st.text_input("Enter your query:")
-dataset_field = "Technological and Clinical Context"  # ή το πεδίο που επέλεξες
+
 # Function to handle RAG model execution
 def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query, dataset=None):
     if rag_option == "Self RAG":
@@ -89,8 +96,7 @@ def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_fil
             csv_files=csv_files,
             txt_files=txt_files,
             direct_txt_content=direct_txt_content,
-            dataset=dataset,  # Πέρασε τα δεδομένα του split 'train'
-            dataset_field=dataset_field  # Πέρασε το πεδίο που θέλεις
+            dataset=dataset,
         )
         response = rag.run(query)
         st.write(f"Response: {response}")
@@ -104,7 +110,7 @@ def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_fil
             csv_files=csv_files,
             txt_files=txt_files,
             direct_txt_content=direct_txt_content,
-            dataset=dataset
+            dataset=dataset,
         )
         asyncio.run(graph_rag.initialize())
         final_answer, subgraph = graph_rag.query(query)
@@ -175,7 +181,7 @@ if st.button("Run Query"):
         st.error("Please upload files, provide URLs, or enable the dataset, and input a query.")
     else:
         # Run the RAG Model
-        dataset=cleaned_dataset
+        dataset = cleaned_dataset if use_dataset else None
         run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query, dataset)
 
     # Clean up temporary files

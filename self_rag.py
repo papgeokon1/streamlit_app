@@ -70,7 +70,7 @@ utility_prompt = PromptTemplate(
 # Define main class
 
 class SelfRAG:
-    def __init__(self, urls, pdf_files, json_files=None, jsonl_files=None, html_files=None, csv_files=None, txt_files=None, direct_txt_content="",dataset=None,dataset_field="" ,top_k=3):
+    def __init__(self, urls, pdf_files, json_files=None, jsonl_files=None, html_files=None, csv_files=None, txt_files=None, direct_txt_content="", dataset=None, top_k=3):
         combined_content = ""
         tasks = []  # Λίστα για αποθήκευση των ασύγχρονων εργασιών
 
@@ -131,25 +131,16 @@ class SelfRAG:
                 for pdf_doc in pdf_docs:
                     combined_content += pdf_doc.page_content + "\n\n"
 
-        # Επεξεργασία Dataset
+        # Προσθήκη περιεχομένου από το dataset
         if dataset:
-            print("Processing dataset...")
-            if dataset_field:  # Επιλεγμένο πεδίο από το dataset
-                texts = [entry[dataset_field] for entry in dataset if dataset_field in entry and isinstance(entry[dataset_field], str)]
-                combined_content += "\n\n".join(texts) + "\n\n"
-            else:
-                print("No dataset field specified. Skipping dataset processing.")
+            print("Adding dataset content to combined content...")
+            combined_content += "\n\n".join(dataset) + "\n\n"
 
-        # Έλεγχος αν το combined_content είναι έγκυρο
+        # Δημιουργία vectorstore
         if combined_content.strip():
-            try:
-                self.vectorstore = encode_from_string(combined_content)
-                print("Vectorstore created successfully.")
-            except Exception as e:
-                print(f"Error creating vectorstore: {e}")
-                raise
+            self.vectorstore = encode_from_string(combined_content)
         else:
-            raise ValueError("Combined content is empty. Cannot create vectorstore.")
+            raise ValueError("The combined content is empty. Cannot create vectorstore.")
 
         # Αρχικοποίηση άλλων παραμέτρων
         self.top_k = top_k
