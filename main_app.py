@@ -22,17 +22,20 @@ def clear_database():
     st.session_state.pop('graph_rag_instance', None)
     st.success("Database cleared successfully.")
 
-# Function to load dataset from ZIP
 def load_cleaned_dataset_from_zip():
-    zip_path = "data/cleaned_lawstack.zip"  # Path to the zip file in your repository
-    json_file = "cleaned_lawstack.json"    # The name of the JSON file inside the ZIP
+    zip_path = "./data/cleaned_lawstack.zip"  # Path στο project
+    json_file = "cleaned_lawstack.json"  # Όνομα του αρχείου στο zip
 
-    # Extract the JSON file from the ZIP
-    with zipfile.ZipFile(zip_path, 'r') as z:
-        with z.open(json_file) as f:
-            dataset = json.load(f)
-
-    return dataset
+    try:
+        # Αποσυμπίεση και φόρτωση
+        with zipfile.ZipFile(zip_path, 'r') as z:
+            with z.open(json_file) as f:
+                dataset = json.load(f)
+        return dataset
+    except FileNotFoundError:
+        raise FileNotFoundError(f"The zip file at {zip_path} does not exist.")
+    except KeyError:
+        raise KeyError(f"The JSON file {json_file} was not found in the zip.")
 
 # Streamlit App Interface
 st.title("RAG Assistant")
