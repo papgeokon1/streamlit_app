@@ -72,7 +72,7 @@ if use_dataset:
     try:
         # Load dataset from the ZIP file
         cleaned_dataset = load_cleaned_dataset_from_zip()
-        combined_content = prepare_combined_content_from_dataset(dataset)
+        combined_content = prepare_combined_content_from_dataset(cleaned_dataset)
         st.success("Dataset loaded successfully!")
         st.write(f"Number of entries: {len(cleaned_dataset)}")
         st.write("Preview:")
