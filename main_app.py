@@ -84,7 +84,7 @@ if use_dataset:
 query = st.text_input("Enter your query:")
 
 # Function to handle RAG model execution
-def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query, dataset=None):
+def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query, dataset=None, combined_content=None):
     if rag_option == "Self RAG":
         rag = SelfRAG(
             urls=urls,
@@ -96,6 +96,7 @@ def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_fil
             txt_files=txt_files,
             direct_txt_content=direct_txt_content,
             dataset=dataset,
+            combined_content=combined_content,  # Πέρασμα του combined_content
         )
         response = rag.run(query)
         st.write(f"Response: {response}")
@@ -110,6 +111,7 @@ def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_fil
             txt_files=txt_files,
             direct_txt_content=direct_txt_content,
             dataset=dataset,
+            combined_content=combined_content,  # Πέρασμα και εδώ αν χρειαστεί
         )
         asyncio.run(graph_rag.initialize())
         final_answer, subgraph = graph_rag.query(query)
@@ -175,12 +177,25 @@ if st.button("Run Query"):
                 temp_txt.write(txt_file.read())
                 txt_files.append(temp_txt.name)
 
-    # Check inputs
     if not (pdf_files or json_files or jsonl_files or html_files or csv_files or txt_files or urls or direct_txt_content or use_dataset) or not query:
         st.error("Please upload files, provide URLs, or enable the dataset, and input a query.")
     else:
         # Run the RAG Model
-        run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query, dataset)
+        run_rag_model(
+            rag_option,
+            urls,
+            pdf_files,
+            json_files,
+            jsonl_files,
+            html_files,
+            csv_files,
+            txt_files,
+            direct_txt_content,
+            query,
+            dataset,
+            combined_content,  # Πρόσθεσε το combined_content εδώ
+        )
+
 
     # Clean up temporary files
     for file_path in pdf_files + json_files + jsonl_files + html_files + csv_files + txt_files:
