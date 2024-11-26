@@ -70,8 +70,8 @@ utility_prompt = PromptTemplate(
 # Define main class
 
 class SelfRAG:
-    def __init__(self, urls, pdf_files, json_files=None, jsonl_files=None, html_files=None, csv_files=None, txt_files=None, direct_txt_content="", dataset=None,combined_content="", top_k=3):
-        
+    def __init__(self, urls, pdf_files, json_files=None, jsonl_files=None, html_files=None, csv_files=None, txt_files=None, direct_txt_content="", dataset=None, top_k=3):
+        combined_content = ""
         tasks = []  # Λίστα για αποθήκευση των ασύγχρονων εργασιών
 
         # Επεξεργασία URLs

@@ -3,11 +3,10 @@ from io import BytesIO
 import tempfile
 import asyncio
 import os
-import json
+from datasets import load_dataset
 from self_rag import SelfRAG
 from graph_rag_v2 import GraphRAG
 import io
-import zipfile
 
 # Function to run async functions synchronously
 def run_async(func, *args):
@@ -16,37 +15,33 @@ def run_async(func, *args):
     result = loop.run_until_complete(func(*args))
     return result
 
-def prepare_combined_content_from_dataset(dataset):
-    # Συνδυάζει όλα τα entries του dataset σε ένα string
-    combined_content = "\n".join(dataset)
-    return combined_content
-
 # Clear Database function
 def clear_database():
     st.session_state.pop('self_rag_instance', None)
     st.session_state.pop('graph_rag_instance', None)
     st.success("Database cleared successfully.")
 
-def load_cleaned_dataset_from_zip():
-    zip_path = "./data/cleaned_lawstack.zip"  # Path στο project
-    json_file = "cleaned_lawstack.json"  # Όνομα του αρχείου στο zip
-
-    try:
-        # Αποσυμπίεση και φόρτωση
-        with zipfile.ZipFile(zip_path, 'r') as z:
-            with z.open(json_file) as f:
-                dataset = json.load(f)
-        return dataset
-    except FileNotFoundError:
-        raise FileNotFoundError(f"The zip file at {zip_path} does not exist.")
-    except KeyError:
-        raise KeyError(f"The JSON file {json_file} was not found in the zip.")
-
 # Streamlit App Interface
 st.title("RAG Assistant")
 
 # Choose RAG Model
 rag_option = st.selectbox("Choose RAG Model", ("Self RAG", "Graph RAG"))
+
+# Load dataset function
+@st.cache_data
+def load_orthopedics():
+    return load_dataset("caleboh/tka_tha_meta_analysis", encoding="ISO-8859-1")
+
+# Function to clean dataset
+def extract_field_from_dataset(dataset, field=None):
+    extracted_texts = []
+    for entry in dataset:
+        if isinstance(entry, dict):
+            if field and field in entry and isinstance(entry[field], str):
+                extracted_texts.append(entry[field].strip())
+            elif not field:
+                extracted_texts.append(" ".join(str(value).strip() for value in entry.values() if isinstance(value, str)))
+    return extracted_texts
 
 # Clear Database Button
 if st.button("Clear Database"):
@@ -64,27 +59,33 @@ url_input = st.text_area("Enter URLs (one per line)", "")
 
 # Checkbox for dataset usage
 use_dataset = st.checkbox("Use Preloaded Dataset")
+dataset_field = None
 dataset = None
 
-
 if use_dataset:
-    st.write("Loading dataset from ZIP...")
-    try:
-        # Load dataset from the ZIP file
-        cleaned_dataset = load_cleaned_dataset_from_zip()
-        combined_content = prepare_combined_content_from_dataset(cleaned_dataset)
-        st.success("Dataset loaded successfully!")
-        st.write(f"Number of entries: {len(cleaned_dataset)}")
-        st.write("Preview:")
-        st.write(cleaned_dataset[:5])  # Show the first 5 entries
-    except Exception as e:
-        st.error(f"Failed to load dataset: {str(e)}")
+    st.write("Loading dataset...")
+    raw_dataset = load_orthopedics()
+    dataset_split = raw_dataset["train"]
+
+    # Let user select a specific field or load all fields
+    all_fields = list(dataset_split.features.keys())
+    dataset_field = st.selectbox("Select a field to extract (optional)", ["All Fields"] + all_fields)
+
+    if dataset_field == "All Fields":
+        cleaned_dataset = extract_field_from_dataset(dataset_split)
+    else:
+        cleaned_dataset = extract_field_from_dataset(dataset_split, field=dataset_field)
+
+    st.success("Dataset loaded and cleaned successfully!")
+    st.write(f"Number of entries: {len(cleaned_dataset)}")
+    st.write("Preview:")
+    st.write(cleaned_dataset[:5])
 
 # User query input
 query = st.text_input("Enter your query:")
 
 # Function to handle RAG model execution
-def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query, dataset=None, combined_content=None):
+def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query, dataset=None):
     if rag_option == "Self RAG":
         rag = SelfRAG(
             urls=urls,
@@ -96,7 +97,6 @@ def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_fil
             txt_files=txt_files,
             direct_txt_content=direct_txt_content,
             dataset=dataset,
-            combined_content=combined_content,  # Πέρασμα του combined_content
         )
         response = rag.run(query)
         st.write(f"Response: {response}")
@@ -111,7 +111,6 @@ def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_fil
             txt_files=txt_files,
             direct_txt_content=direct_txt_content,
             dataset=dataset,
-            combined_content=combined_content,  # Πέρασμα και εδώ αν χρειαστεί
         )
         asyncio.run(graph_rag.initialize())
         final_answer, subgraph = graph_rag.query(query)
@@ -177,25 +176,13 @@ if st.button("Run Query"):
                 temp_txt.write(txt_file.read())
                 txt_files.append(temp_txt.name)
 
+    # Check inputs
     if not (pdf_files or json_files or jsonl_files or html_files or csv_files or txt_files or urls or direct_txt_content or use_dataset) or not query:
         st.error("Please upload files, provide URLs, or enable the dataset, and input a query.")
     else:
         # Run the RAG Model
-        run_rag_model(
-            rag_option,
-            urls,
-            pdf_files,
-            json_files,
-            jsonl_files,
-            html_files,
-            csv_files,
-            txt_files,
-            direct_txt_content,
-            query,
-            dataset,
-            combined_content,  # Πρόσθεσε το combined_content εδώ
-        )
-
+        dataset = cleaned_dataset if use_dataset else None
+        run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query, dataset)
 
     # Clean up temporary files
     for file_path in pdf_files + json_files + jsonl_files + html_files + csv_files + txt_files:
