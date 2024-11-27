@@ -78,9 +78,6 @@ def search_dataset(query, dataset):
     return [dataset[i] for i in top_indices]
 
 
-# Streamlit App Interface
-st.title("Medical Assistant for Total Joint Replacement")
-
 # Clear Database Button
 if st.button("Clear Database"):
     clear_database()
@@ -241,75 +238,3 @@ if st.button("Analyze Files"):
     for file_path in pdf_files + json_files + jsonl_files + html_files + csv_files + txt_files + jpeg_files:
         os.remove(file_path)
 
-# Εκτέλεση ερωτημάτων μέσω RAG
-if st.button("Run Query"):
-    # Εισαγωγή του ερωτήματος από τον χρήστη
-    query = st.text_input("Enter your query:")
-    
-    # Προετοιμασία αρχείων και URLs
-    pdf_files = []
-    json_files = []
-    jsonl_files = []
-    html_files = []
-    csv_files = []
-    txt_files = []
-    jpeg_files = []
-    urls = url_input.splitlines() if url_input else []
-
-    # Αποθήκευση των αρχείων σε προσωρινό χώρο
-    if uploaded_pdfs:
-        for pdf in uploaded_pdfs:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
-                temp_pdf.write(pdf.read())
-                pdf_files.append(temp_pdf.name)
-
-    if uploaded_jsons:
-        for json_file in uploaded_jsons:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as temp_json:
-                temp_json.write(json_file.read())
-                json_files.append(temp_json.name)
-
-    if uploaded_jsonls:
-        for jsonl_file in uploaded_jsonls:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".jsonl") as temp_jsonl:
-                temp_jsonl.write(jsonl_file.read())
-                jsonl_files.append(temp_jsonl.name)
-
-    if uploaded_htmls:
-        for html_file in uploaded_htmls:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".html") as temp_html:
-                temp_html.write(html_file.read())
-                html_files.append(temp_html.name)
-
-    if uploaded_csvs:
-        for csv_file in uploaded_csvs:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as temp_csv:
-                temp_csv.write(csv_file.read())
-                csv_files.append(temp_csv.name)
-
-    if uploaded_txts:
-        for txt_file in uploaded_txts:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as temp_txt:
-                temp_txt.write(txt_file.read())
-                txt_files.append(temp_txt.name)
-
-    if uploaded_jpegs:
-        for jpeg in uploaded_jpegs:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".jpeg") as temp_jpeg:
-                temp_jpeg.write(jpeg.read())
-                jpeg_files.append(temp_jpeg.name)
-
-    # Έλεγχος για τα απαιτούμενα δεδομένα
-    if not (pdf_files or json_files or jsonl_files or html_files or csv_files or txt_files or jpeg_files or urls or direct_txt_content or use_dataset) or not query:
-        st.error("Please upload files, provide URLs, or enable the dataset, and input a query.")
-    else:
-        st.write("Running query with provided data...")
-        # Εκτέλεση του RAG
-        dataset = cleaned_dataset if use_dataset else None
-        run_rag_model(
-            rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, jpeg_files, direct_txt_content, query, dataset
-        )
-
-    # Καθαρισμός προσωρινών αρχείων
-    for file_path in pdf_files + json_files + jsonl_files + html_files + csv_files + txt_files + jpeg_files:
-        os.remove(file_path)
