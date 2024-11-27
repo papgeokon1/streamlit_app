@@ -7,6 +7,9 @@ from datasets import load_dataset
 from self_rag import SelfRAG
 from graph_rag_v2 import GraphRAG
 import io
+from transformers import AutoProcessor, AutoModelForImageClassification
+from rank_bm25 import BM25Okapi
+from PIL import Image
 
 
 # Function to run async functions synchronously
@@ -23,7 +26,7 @@ def clear_database():
     st.success("Database cleared successfully.")
 
 # Streamlit App Interface
-st.title("RAG Assistant")
+st.title("Medical Assistant for Total Joint Replacement")
 
 # Choose RAG Model
 rag_option = st.selectbox("Choose RAG Model", ("Self RAG", "Graph RAG"))
@@ -43,6 +46,40 @@ def extract_field_from_dataset(dataset, field=None):
             elif not field:
                 extracted_texts.append(" ".join(str(value).strip() for value in entry.values() if isinstance(value, str)))
     return extracted_texts
+
+@st.cache_resource
+def load_xray_model():
+    processor = AutoProcessor.from_pretrained("microsoft/resnet-50")
+    model = AutoModelForImageClassification.from_pretrained("microsoft/resnet-50")
+    return processor, model
+
+def analyze_xray(image_path, processor, model):
+    """
+    Ανάλυση ακτινογραφίας.
+    """
+    image = Image.open(image_path).convert("RGB")
+    inputs = processor(images=image, return_tensors="pt")
+    outputs = model(**inputs)
+    logits = outputs.logits
+    predicted_class = logits.argmax(-1).item()
+    return predicted_class
+
+
+# Αναζήτηση στο dataset
+def search_dataset(query, dataset):
+    """
+    Επιστρέφει σχετικές εγγραφές από το dataset με χρήση BM25.
+    """
+    corpus = [entry["indication"].lower() for entry in dataset]
+    bm25 = BM25Okapi([doc.split() for doc in corpus])
+    query_tokens = query.lower().split()
+    scores = bm25.get_scores(query_tokens)
+    top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:5]
+    return [dataset[i] for i in top_indices]
+
+
+# Streamlit App Interface
+st.title("Medical Assistant for Total Joint Replacement")
 
 # Clear Database Button
 if st.button("Clear Database"):
@@ -81,6 +118,7 @@ if use_dataset:
     st.success("Dataset loaded and cleaned successfully!")
 
     st.write(cleaned_dataset[:5])
+
 
 # User query input
 query = st.text_input("Enter your query:")
@@ -131,19 +169,21 @@ def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_fil
         else:
             st.write("No subgraph available.")
 
-# Execution and Profiling
-if st.button("Run Query"):
-    # Prepare input files and URLs
+if st.button("Analyze Files"):
+    processor, model = load_xray_model()
+    dataset = cleaned_dataset if use_dataset else None
+
+    # Προετοιμασία λιστών για κάθε τύπο αρχείου
     pdf_files = []
     json_files = []
     jsonl_files = []
     html_files = []
     csv_files = []
     txt_files = []
-    jpeg_files= []
+    jpeg_files = []
     urls = url_input.splitlines() if url_input else []
 
-    # Save uploaded files to temporary storage
+    # Αποθήκευση ανεβασμένων αρχείων σε προσωρινή μνήμη
     if uploaded_pdfs:
         for pdf in uploaded_pdfs:
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
@@ -186,15 +226,90 @@ if st.button("Run Query"):
                 temp_jpeg.write(jpeg.read())
                 jpeg_files.append(temp_jpeg.name)
 
-
-    # Check inputs
+    # Έλεγχος εισόδων
     if not (pdf_files or json_files or jsonl_files or html_files or csv_files or txt_files or jpeg_files or urls or direct_txt_content or use_dataset) or not query:
         st.error("Please upload files, provide URLs, or enable the dataset, and input a query.")
     else:
-        # Run the RAG Model
+        st.write("Processing input files and data...")
+        # Εκτέλεση του RAG μοντέλου
         dataset = cleaned_dataset if use_dataset else None
-        run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, jpeg_files ,direct_txt_content, query, dataset)
+        run_rag_model(
+            rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, jpeg_files, direct_txt_content, query, dataset
+        )
 
-    # Clean up temporary files
+    # Καθαρισμός προσωρινών αρχείων
+    for file_path in pdf_files + json_files + jsonl_files + html_files + csv_files + txt_files + jpeg_files:
+        os.remove(file_path)
+
+# Εκτέλεση ερωτημάτων μέσω RAG
+if st.button("Run Query"):
+    # Εισαγωγή του ερωτήματος από τον χρήστη
+    query = st.text_input("Enter your query:")
+    
+    # Προετοιμασία αρχείων και URLs
+    pdf_files = []
+    json_files = []
+    jsonl_files = []
+    html_files = []
+    csv_files = []
+    txt_files = []
+    jpeg_files = []
+    urls = url_input.splitlines() if url_input else []
+
+    # Αποθήκευση των αρχείων σε προσωρινό χώρο
+    if uploaded_pdfs:
+        for pdf in uploaded_pdfs:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
+                temp_pdf.write(pdf.read())
+                pdf_files.append(temp_pdf.name)
+
+    if uploaded_jsons:
+        for json_file in uploaded_jsons:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as temp_json:
+                temp_json.write(json_file.read())
+                json_files.append(temp_json.name)
+
+    if uploaded_jsonls:
+        for jsonl_file in uploaded_jsonls:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".jsonl") as temp_jsonl:
+                temp_jsonl.write(jsonl_file.read())
+                jsonl_files.append(temp_jsonl.name)
+
+    if uploaded_htmls:
+        for html_file in uploaded_htmls:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".html") as temp_html:
+                temp_html.write(html_file.read())
+                html_files.append(temp_html.name)
+
+    if uploaded_csvs:
+        for csv_file in uploaded_csvs:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".csv") as temp_csv:
+                temp_csv.write(csv_file.read())
+                csv_files.append(temp_csv.name)
+
+    if uploaded_txts:
+        for txt_file in uploaded_txts:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as temp_txt:
+                temp_txt.write(txt_file.read())
+                txt_files.append(temp_txt.name)
+
+    if uploaded_jpegs:
+        for jpeg in uploaded_jpegs:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".jpeg") as temp_jpeg:
+                temp_jpeg.write(jpeg.read())
+                jpeg_files.append(temp_jpeg.name)
+
+    # Έλεγχος για τα απαιτούμενα δεδομένα
+    if not (pdf_files or json_files or jsonl_files or html_files or csv_files or txt_files or jpeg_files or urls or direct_txt_content or use_dataset) or not query:
+        st.error("Please upload files, provide URLs, or enable the dataset, and input a query.")
+    else:
+        st.write("Running query with provided data...")
+        # Εκτέλεση του RAG
+        dataset = cleaned_dataset if use_dataset else None
+        run_rag_model(
+            rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, jpeg_files, direct_txt_content, query, dataset
+        )
+
+    # Καθαρισμός προσωρινών αρχείων
     for file_path in pdf_files + json_files + jsonl_files + html_files + csv_files + txt_files + jpeg_files:
         os.remove(file_path)
