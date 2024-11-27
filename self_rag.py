@@ -70,7 +70,7 @@ utility_prompt = PromptTemplate(
 # Define main class
 
 class SelfRAG:
-    def __init__(self, urls, pdf_files, json_files=None, jsonl_files=None, html_files=None, csv_files=None, txt_files=None, direct_txt_content="", dataset=None, top_k=3):
+    def __init__(self, urls, pdf_files, json_files=None, jsonl_files=None, html_files=None, csv_files=None, txt_files=None,jpeg_files=None ,direct_txt_content="", dataset=None, top_k=3):
         combined_content = ""
         tasks = []  # Λίστα για αποθήκευση των ασύγχρονων εργασιών
 
@@ -109,6 +109,11 @@ class SelfRAG:
             for txt_path in txt_files:
                 print(f"Processing TXT file: {txt_path}")
                 tasks.append(fetch_text_from_txt(txt_path))  # Προσθέτουμε την εργασία στη λίστα
+
+        if jpeg_files:
+            for jpeg_file in jpeg_files:
+                print(f"Fetching content from: {jpeg_file}")
+                tasks.append(fetch_text_from_jpeg(jpeg_file))  # Προσθέτουμε την εργασία στη λίστα                
 
         # Προσθήκη περιεχομένου από το text area
         if direct_txt_content:

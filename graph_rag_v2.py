@@ -721,7 +721,7 @@ class Visualizer:
 
 # Define the graph RAG class
 class GraphRAG:
-    def __init__(self, urls, pdf_files, json_files=None,jsonl_files=None , html_files=None, csv_files=None,txt_files=None,direct_txt_content="",dataset=None):
+    def __init__(self, urls, pdf_files, json_files=None,jsonl_files=None , html_files=None, csv_files=None,txt_files=None,jpeg_files=None,direct_txt_content="",dataset=None):
         self.urls = urls
         self.pdf_files = pdf_files
         self.json_files = json_files
@@ -729,6 +729,7 @@ class GraphRAG:
         self.html_files = html_files
         self.csv_files = csv_files
         self.txt_files=txt_files
+        self.jpeg_files=jpeg_files
         self.direct_txt_content=direct_txt_content
         self.dataset = dataset 
         self.vectorstore = None
@@ -780,6 +781,11 @@ class GraphRAG:
             for txt_path in self.txt_files:
                 print(f"Processing TXT file: {txt_path}")
                 tasks.append(fetch_text_from_txt(txt_path))
+
+        if self.jpeg_files:
+            for jpeg_file in self.jpeg_files:
+                print(f"Processing TXT file: {jpeg_file}")
+                tasks.append(fetch_text_from_jpeg(jpeg_file))
 
         # Εκτέλεση όλων των εργασιών παράλληλα και συνένωση των αποτελεσμάτων
         contents = await self._fetch_all_contents(tasks)

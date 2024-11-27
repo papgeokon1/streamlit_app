@@ -8,6 +8,7 @@ from self_rag import SelfRAG
 from graph_rag_v2 import GraphRAG
 import io
 
+
 # Function to run async functions synchronously
 def run_async(func, *args):
     loop = asyncio.new_event_loop()
@@ -54,6 +55,7 @@ uploaded_jsons = st.file_uploader("Upload JSON files", type="json", accept_multi
 uploaded_htmls = st.file_uploader("Upload HTML files", type="html", accept_multiple_files=True)
 uploaded_csvs = st.file_uploader("Upload CSV files", type="csv", accept_multiple_files=True)
 uploaded_txts = st.file_uploader("Upload TXT files", type="txt", accept_multiple_files=True)
+uploaded_jpegs = st.file_uploader("Upload JPEG files", type="jpeg", accept_multiple_files=True)
 direct_txt_content = st.text_area("Write your TXT content here:")
 url_input = st.text_area("Enter URLs (one per line)", "")
 
@@ -77,15 +79,14 @@ if use_dataset:
         cleaned_dataset = extract_field_from_dataset(dataset_split, field=dataset_field)
 
     st.success("Dataset loaded and cleaned successfully!")
-    st.write(f"Number of entries: {len(cleaned_dataset)}")
-    st.write("Preview:")
+
     st.write(cleaned_dataset[:5])
 
 # User query input
 query = st.text_input("Enter your query:")
 
 # Function to handle RAG model execution
-def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query, dataset=None):
+def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files,jpeg_files ,direct_txt_content, query, dataset=None):
     if rag_option == "Self RAG":
         rag = SelfRAG(
             urls=urls,
@@ -95,6 +96,7 @@ def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_fil
             html_files=html_files,
             csv_files=csv_files,
             txt_files=txt_files,
+            jpeg_files=jpeg_files,
             direct_txt_content=direct_txt_content,
             dataset=dataset,
         )
@@ -109,6 +111,7 @@ def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_fil
             html_files=html_files,
             csv_files=csv_files,
             txt_files=txt_files,
+            jpeg_files=jpeg_files,
             direct_txt_content=direct_txt_content,
             dataset=dataset,
         )
@@ -137,6 +140,7 @@ if st.button("Run Query"):
     html_files = []
     csv_files = []
     txt_files = []
+    jpeg_files= []
     urls = url_input.splitlines() if url_input else []
 
     # Save uploaded files to temporary storage
@@ -176,14 +180,21 @@ if st.button("Run Query"):
                 temp_txt.write(txt_file.read())
                 txt_files.append(temp_txt.name)
 
+    if uploaded_jpegs:
+        for jpeg in uploaded_jpegs:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".jpeg") as temp_jpeg:
+                temp_jpeg.write(jpeg.read())
+                jpeg_files.append(temp_jpeg.name)
+
+
     # Check inputs
-    if not (pdf_files or json_files or jsonl_files or html_files or csv_files or txt_files or urls or direct_txt_content or use_dataset) or not query:
+    if not (pdf_files or json_files or jsonl_files or html_files or csv_files or txt_files or jpeg_files or urls or direct_txt_content or use_dataset) or not query:
         st.error("Please upload files, provide URLs, or enable the dataset, and input a query.")
     else:
         # Run the RAG Model
         dataset = cleaned_dataset if use_dataset else None
-        run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query, dataset)
+        run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, jpeg_files ,direct_txt_content, query, dataset)
 
     # Clean up temporary files
-    for file_path in pdf_files + json_files + jsonl_files + html_files + csv_files + txt_files:
+    for file_path in pdf_files + json_files + jsonl_files + html_files + csv_files + txt_files + jpeg_files:
         os.remove(file_path)

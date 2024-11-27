@@ -28,6 +28,25 @@ import aiofiles
 import json
 import pandas as pd
 from bs4 import BeautifulSoup
+from PIL import Image
+import pytesseract
+
+async def fetch_text_from_jpeg(jpeg_file):
+    """
+    Εξάγει κείμενο από ένα αρχείο JPEG χρησιμοποιώντας OCR.
+    """
+    try:
+        # Άνοιγμα της εικόνας
+        image = Image.open(jpeg_file)
+        
+        # Εξαγωγή κειμένου με OCR
+        text = pytesseract.image_to_string(image)
+        
+        return text.strip()
+    except Exception as e:
+        print(f"Error processing JPEG file: {e}")
+        return ""
+
 
 
 async def fetch_text_from_json(json_file):
