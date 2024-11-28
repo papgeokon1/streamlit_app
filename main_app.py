@@ -6,11 +6,6 @@ import os
 from datasets import load_dataset
 from self_rag import SelfRAG
 from graph_rag_v2 import GraphRAG
-import io
-from transformers import AutoProcessor, AutoModelForImageClassification
-from rank_bm25 import BM25Okapi
-from PIL import Image
-
 
 # Function to run async functions synchronously
 def run_async(func, *args):
@@ -47,37 +42,6 @@ def extract_field_from_dataset(dataset, field=None):
                 extracted_texts.append(" ".join(str(value).strip() for value in entry.values() if isinstance(value, str)))
     return extracted_texts
 
-@st.cache_resource
-def load_xray_model():
-    processor = AutoProcessor.from_pretrained("microsoft/resnet-50")
-    model = AutoModelForImageClassification.from_pretrained("microsoft/resnet-50")
-    return processor, model
-
-def analyze_xray(image_path, processor, model):
-    """
-    Ανάλυση ακτινογραφίας.
-    """
-    image = Image.open(image_path).convert("RGB")
-    inputs = processor(images=image, return_tensors="pt")
-    outputs = model(**inputs)
-    logits = outputs.logits
-    predicted_class = logits.argmax(-1).item()
-    return predicted_class
-
-
-# Αναζήτηση στο dataset
-def search_dataset(query, dataset):
-    """
-    Επιστρέφει σχετικές εγγραφές από το dataset με χρήση BM25.
-    """
-    corpus = [entry["indication"].lower() for entry in dataset]
-    bm25 = BM25Okapi([doc.split() for doc in corpus])
-    query_tokens = query.lower().split()
-    scores = bm25.get_scores(query_tokens)
-    top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:5]
-    return [dataset[i] for i in top_indices]
-
-
 # Clear Database Button
 if st.button("Clear Database"):
     clear_database()
@@ -89,7 +53,6 @@ uploaded_jsons = st.file_uploader("Upload JSON files", type="json", accept_multi
 uploaded_htmls = st.file_uploader("Upload HTML files", type="html", accept_multiple_files=True)
 uploaded_csvs = st.file_uploader("Upload CSV files", type="csv", accept_multiple_files=True)
 uploaded_txts = st.file_uploader("Upload TXT files", type="txt", accept_multiple_files=True)
-uploaded_jpegs = st.file_uploader("Upload JPEG files", type="jpeg", accept_multiple_files=True)
 direct_txt_content = st.text_area("Write your TXT content here:")
 url_input = st.text_area("Enter URLs (one per line)", "")
 
@@ -103,7 +66,6 @@ if use_dataset:
     raw_dataset = load_orthopedics()
     dataset_split = raw_dataset["train"]
 
-    # Let user select a specific field or load all fields
     all_fields = list(dataset_split.features.keys())
     dataset_field = st.selectbox("Select a field to extract (optional)", ["All Fields"] + all_fields)
 
@@ -114,14 +76,11 @@ if use_dataset:
 
     st.success("Dataset loaded and cleaned successfully!")
 
-    st.write(cleaned_dataset[:5])
-
-
 # User query input
 query = st.text_input("Enter your query:")
 
 # Function to handle RAG model execution
-def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files,jpeg_files ,direct_txt_content, query, dataset=None):
+def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query, dataset=None):
     if rag_option == "Self RAG":
         rag = SelfRAG(
             urls=urls,
@@ -131,7 +90,6 @@ def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_fil
             html_files=html_files,
             csv_files=csv_files,
             txt_files=txt_files,
-            jpeg_files=jpeg_files,
             direct_txt_content=direct_txt_content,
             dataset=dataset,
         )
@@ -146,7 +104,6 @@ def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_fil
             html_files=html_files,
             csv_files=csv_files,
             txt_files=txt_files,
-            jpeg_files=jpeg_files,
             direct_txt_content=direct_txt_content,
             dataset=dataset,
         )
@@ -167,20 +124,10 @@ def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_fil
             st.write("No subgraph available.")
 
 if st.button("Analyze Files"):
-    processor, model = load_xray_model()
     dataset = cleaned_dataset if use_dataset else None
 
-    # Προετοιμασία λιστών για κάθε τύπο αρχείου
-    pdf_files = []
-    json_files = []
-    jsonl_files = []
-    html_files = []
-    csv_files = []
-    txt_files = []
-    jpeg_files = []
-    urls = url_input.splitlines() if url_input else []
+    pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, urls = [], [], [], [], [], [], []
 
-    # Αποθήκευση ανεβασμένων αρχείων σε προσωρινή μνήμη
     if uploaded_pdfs:
         for pdf in uploaded_pdfs:
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_pdf:
@@ -217,24 +164,14 @@ if st.button("Analyze Files"):
                 temp_txt.write(txt_file.read())
                 txt_files.append(temp_txt.name)
 
-    if uploaded_jpegs:
-        for jpeg in uploaded_jpegs:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".jpeg") as temp_jpeg:
-                temp_jpeg.write(jpeg.read())
-                jpeg_files.append(temp_jpeg.name)
+    urls = url_input.splitlines() if url_input else []
 
-    # Έλεγχος εισόδων
-    if not (pdf_files or json_files or jsonl_files or html_files or csv_files or txt_files or jpeg_files or urls or direct_txt_content or use_dataset) or not query:
+    if not (pdf_files or json_files or jsonl_files or html_files or csv_files or txt_files or urls or direct_txt_content or use_dataset) or not query:
         st.error("Please upload files, provide URLs, or enable the dataset, and input a query.")
     else:
-        st.write("Processing input files and data...")
-        # Εκτέλεση του RAG μοντέλου
-        dataset = cleaned_dataset if use_dataset else None
         run_rag_model(
-            rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, jpeg_files, direct_txt_content, query, dataset
+            rag_option, urls, pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, direct_txt_content, query, dataset
         )
 
-    # Καθαρισμός προσωρινών αρχείων
-    for file_path in pdf_files + json_files + jsonl_files + html_files + csv_files + txt_files + jpeg_files:
+    for file_path in pdf_files + json_files + jsonl_files + html_files + csv_files + txt_files:
         os.remove(file_path)
-
