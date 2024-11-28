@@ -201,17 +201,48 @@ class KnowledgeGraph:
         else:
             print("Graph, embeddings, and concepts loaded from cache.")
 
-    def _extract_keyword(self, text, top_n=1):
+    def extract_clean_keywords(self, text, top_n=3):
         """
-        Εξαγωγή λέξεων-κλειδιών χρησιμοποιώντας το KeyBERT.
+        Συνδυασμός KeyBERT και spaCy για εξαγωγή καθαρών keywords.
+        Args:
+            text (str): Το κείμενο από το οποίο εξάγονται τα keywords.
+            top_n (int): Ο αριθμός των keywords που θέλουμε.
+
+        Returns:
+            List[str]: Μια λίστα με "καθαρά" keywords.
         """
-        keywords = self.kw_model.extract_keywords(
-            text,
-            keyphrase_ngram_range=(1, 1),  # Μόνο μεμονωμένες λέξεις
-            stop_words='english',
-            top_n=top_n  # Επιλογή έως και N keywords
+        # Εξαγωγή keywords με KeyBERT
+        keybert_keywords = self.kw_model.extract_keywords(
+            text, keyphrase_ngram_range=(1, 2), stop_words='english', top_n=top_n
         )
-        return keywords[0][0] if keywords else "No Keyword"
+        keybert_keywords = [kw[0] for kw in keybert_keywords]  # Παίρνουμε μόνο τις λέξεις-κλειδιά
+
+        # Καθαρισμός keywords με spaCy
+        doc = self.nlp(" ".join(keybert_keywords))
+        clean_keywords = [
+            token.text for token in doc if token.pos_ in {"NOUN", "PROPN"} and len(token.text) > 2
+        ]
+
+        # Εξασφάλιση μοναδικότητας
+        clean_keywords = list(dict.fromkeys(clean_keywords))  # Αφαίρεση διπλών
+
+        return clean_keywords
+
+        
+
+    def _extract_keyword(self, text, top_n=3):
+        """
+        Εξαγωγή keywords για χρήση στους κόμβους του γράφου.
+        Args:
+            text (str): Το κείμενο του κόμβου.
+            top_n (int): Ο αριθμός των keywords που θέλουμε.
+
+        Returns:
+            str: Το πρώτο καθαρό keyword (ή 'No Keyword' αν δεν υπάρχει).
+        """
+        clean_keywords = self.extract_clean_keywords(text, top_n=top_n)
+        return clean_keywords[0] if clean_keywords else "No Keyword"
+
 
     def _add_nodes(self, splits):
         used_keywords = set()  # Set για αποθήκευση των ήδη χρησιμοποιημένων keywords
@@ -219,13 +250,13 @@ class KnowledgeGraph:
             content_hash = hashlib.md5(split.page_content.encode('utf-8')).hexdigest()
 
             if content_hash not in self.node_content_hashes:
-                # Εξαγωγή keyword ως label
+                # Εξαγωγή μοναδικού keyword
                 base_keyword = self._extract_keyword(split.page_content)
 
-                # Εξασφάλιση μοναδικότητας keyword
+                # Εξασφάλιση μοναδικότητας
                 unique_keyword = base_keyword
-                while unique_keyword in used_keywords:  # Αν το keyword υπάρχει ήδη, εξάγουμε νέο
-                    unique_keyword = self._generate_unique_keyword(unique_keyword)
+                while unique_keyword in used_keywords:
+                    unique_keyword += "_new"  # Ή οποιοδήποτε άλλο μοναδικό suffix θέλεις
 
                 # Προσθήκη του keyword στη λίστα των χρησιμοποιημένων
                 used_keywords.add(unique_keyword)
@@ -240,13 +271,6 @@ class KnowledgeGraph:
             else:
                 print(f"Duplicate node detected and skipped: {split.page_content[:100]}...")
 
-    def _generate_unique_keyword(self, keyword):
-        """
-        Παράγει μια μοναδική εκδοχή του keyword τροποποιώντας το.
-        Μπορείς να αλλάξεις τη λογική εδώ για πιο έξυπνη παραγωγή keywords.
-        """
-        # Για παράδειγμα, προσθέτουμε έναν αριθμό hash
-        return f"{keyword}_{hashlib.md5(keyword.encode()).hexdigest()[:4]}"
 
 
     def _create_embeddings(self, splits, embedding_model):
@@ -687,29 +711,32 @@ class Visualizer:
         plt.show()
 
     def visualize_subgraph(self, subgraph):
+        """
+        Οπτικοποιεί ένα υπογράφημα του knowledge graph με τα νέα labels.
+        """
         # Δημιουργία layout για το υπογράφημα
         pos = nx.spring_layout(subgraph)
 
-        # Εξαγωγή labels κόμβων (χρήση του 'label' αντί για 'concepts' ή 'content')
+        # Εξαγωγή labels κόμβων (χρήση του 'label' αντί για concepts ή content)
         labels = {node: data.get('label', 'Unknown') for node, data in subgraph.nodes(data=True)}
-        
+
         # Καθορισμός του πρώτου και του τελευταίου κόμβου
         start_node = list(subgraph.nodes())[0]
         end_node = list(subgraph.nodes())[-1]
-        
+
         # Σχεδίαση του υπογραφήματος με τα labels
         nx.draw(subgraph, pos, with_labels=True, labels=labels, node_color='lightblue', font_weight='bold')
         nx.draw_networkx_nodes(subgraph, pos, nodelist=[start_node], node_color='green', node_size=3000, label="Start")
         nx.draw_networkx_nodes(subgraph, pos, nodelist=[end_node], node_color='red', node_size=3000, label="End")
-       
+
         # Διαχείριση και εμφάνιση βαρών ακμών
         edge_labels = nx.get_edge_attributes(subgraph, 'weight')  # Απόκτηση βαρών ακμών
         nx.draw_networkx_edge_labels(subgraph, pos, edge_labels=edge_labels)
 
-
         # Εμφάνιση του γράφου
-        plt.legend(["Start Node", "End Node"])        
+        plt.legend(["Start Node", "End Node"])
         st.pyplot(plt)
+
 
     
     
