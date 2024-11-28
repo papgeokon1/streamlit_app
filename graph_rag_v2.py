@@ -214,25 +214,39 @@ class KnowledgeGraph:
         return keywords[0][0] if keywords else "No Keyword"
 
     def _add_nodes(self, splits):
-        node_count = {}
+        used_keywords = set()  # Set για αποθήκευση των ήδη χρησιμοποιημένων keywords
         for i, split in enumerate(splits):
             content_hash = hashlib.md5(split.page_content.encode('utf-8')).hexdigest()
 
             if content_hash not in self.node_content_hashes:
-                # Εξαγωγή του keyword ως label
-                base_name = self._extract_keyword(split.page_content)
-                if base_name in node_count:
-                    node_count[base_name] += 1
-                    unique_node_name = f"{base_name} ({node_count[base_name]})"
-                else:
-                    node_count[base_name] = 1
-                    unique_node_name = base_name
+                # Εξαγωγή keyword ως label
+                base_keyword = self._extract_keyword(split.page_content)
 
-                self.graph.add_node(i, content=split.page_content, label=unique_node_name)
+                # Εξασφάλιση μοναδικότητας keyword
+                unique_keyword = base_keyword
+                while unique_keyword in used_keywords:  # Αν το keyword υπάρχει ήδη, εξάγουμε νέο
+                    unique_keyword = self._generate_unique_keyword(unique_keyword)
+
+                # Προσθήκη του keyword στη λίστα των χρησιμοποιημένων
+                used_keywords.add(unique_keyword)
+
+                # Δημιουργία κόμβου με το μοναδικό keyword
+                self.graph.add_node(
+                    i,
+                    content=split.page_content,
+                    label=unique_keyword
+                )
                 self.node_content_hashes.add(content_hash)
             else:
                 print(f"Duplicate node detected and skipped: {split.page_content[:100]}...")
 
+    def _generate_unique_keyword(self, keyword):
+        """
+        Παράγει μια μοναδική εκδοχή του keyword τροποποιώντας το.
+        Μπορείς να αλλάξεις τη λογική εδώ για πιο έξυπνη παραγωγή keywords.
+        """
+        # Για παράδειγμα, προσθέτουμε έναν αριθμό hash
+        return f"{keyword}_{hashlib.md5(keyword.encode()).hexdigest()[:4]}"
 
 
     def _create_embeddings(self, splits, embedding_model):
