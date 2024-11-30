@@ -260,7 +260,7 @@ class KnowledgeGraph:
                 )
                 self.node_content_hashes.add(content_hash)
             else:
-            print(f"Duplicate node detected and skipped: {split.page_content[:100]}...")
+                print(f"Duplicate node detected and skipped: {split.page_content[:100]}...")
 
 
 
