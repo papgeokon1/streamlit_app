@@ -201,15 +201,15 @@ class KnowledgeGraph:
         else:
             print("Graph, embeddings, and concepts loaded from cache.")
 
-    def extract_clean_keywords(text, top_n=5, used_keywords=None):
+    def extract_clean_keywords(text, kw_model, nlp_model, used_keywords=None, top_n=5):
         """
-        Εξαγωγή καθαρών και μοναδικών keywords για έναν κόμβο.
-        
+        Εξάγει μοναδικά και καθαρά keywords από το κείμενο.
         Args:
             text (str): Το κείμενο από το οποίο εξάγονται τα keywords.
-            top_n (int): Ο αριθμός των keywords που θέλουμε να εξετάσουμε.
-            used_keywords (set): Ένα σύνολο από keywords που έχουν ήδη χρησιμοποιηθεί.
-
+            kw_model (KeyBERT): Το μοντέλο KeyBERT για εξαγωγή λέξεων-κλειδιά.
+            nlp_model (spacy.Language): Το μοντέλο spaCy για καθαρισμό των keywords.
+            used_keywords (set): Σετ με ήδη χρησιμοποιημένα keywords για αποφυγή διπλών.
+            top_n (int): Μέγιστος αριθμός keywords για εξαγωγή.
         Returns:
             str: Ένα μοναδικό και καθαρό keyword για τον κόμβο.
         """
@@ -217,42 +217,26 @@ class KnowledgeGraph:
             used_keywords = set()
 
         # Εξαγωγή keywords με KeyBERT
-        keybert_keywords = self.kw_model.extract_keywords(
+        keybert_keywords = kw_model.extract_keywords(
             text, keyphrase_ngram_range=(1, 2), stop_words='english', top_n=top_n
         )
         candidate_keywords = [kw[0] for kw in keybert_keywords]  # Παίρνουμε μόνο τις λέξεις-κλειδιά
 
-        # Καθαρισμός keywords
-        doc = self.nlp(" ".join(candidate_keywords))
+        # Καθαρισμός keywords με spaCy
+        doc = nlp_model(" ".join(candidate_keywords))
         clean_keywords = [
             token.text for token in doc if token.pos_ in {"NOUN", "PROPN"} and len(token.text) > 2
         ]
 
-        # Εύρεση πρώτου μοναδικού keyword
+        # Επιλογή του πρώτου μη χρησιμοποιημένου keyword
         for keyword in clean_keywords:
-            if keyword.lower() not in used_keywords:
-                used_keywords.add(keyword.lower())  # Προσθήκη στο σύνολο των χρησιμοποιημένων
+            if keyword not in used_keywords:
+                used_keywords.add(keyword)  # Προσθήκη στο σύνολο
                 return keyword
 
-        # Αν δεν βρεθεί μοναδικό, επιστρέφουμε το πρώτο διαθέσιμο keyword
-        return clean_keywords[0] if clean_keywords else "No Keyword"
-
-
+        # Επιστροφή "No Keyword" αν δεν υπάρχει διαθέσιμο
+        return "No Keyword"
         
-
-    def _extract_keyword(self, text, top_n=3):
-        """
-        Εξαγωγή keywords για χρήση στους κόμβους του γράφου.
-        Args:
-            text (str): Το κείμενο του κόμβου.
-            top_n (int): Ο αριθμός των keywords που θέλουμε.
-
-        Returns:
-            str: Το πρώτο καθαρό keyword (ή 'No Keyword' αν δεν υπάρχει).
-        """
-        clean_keywords = self.extract_clean_keywords(text, top_n=top_n)
-        return clean_keywords[0] if clean_keywords else "No Keyword"
-
 
     def _add_nodes(self, splits):
         used_keywords = set()  # Set για αποθήκευση των ήδη χρησιμοποιημένων keywords
@@ -261,7 +245,12 @@ class KnowledgeGraph:
 
             if content_hash not in self.node_content_hashes:
                 # Εξαγωγή μοναδικού και σχετικού keyword
-                unique_keyword = self.extract_clean_keywords(split.page_content, used_keywords=used_keywords)
+                unique_keyword = self.extract_clean_keywords(
+                    text=split.page_content,
+                    kw_model=self.kw_model,  # Χρησιμοποιούμε το KeyBERT
+                    nlp_model=self.nlp,      # Χρησιμοποιούμε το spaCy
+                    used_keywords=used_keywords
+                )
 
                 # Δημιουργία κόμβου με το μοναδικό keyword
                 self.graph.add_node(
@@ -271,8 +260,7 @@ class KnowledgeGraph:
                 )
                 self.node_content_hashes.add(content_hash)
             else:
-                print(f"Duplicate node detected and skipped: {split.page_content[:100]}...")
-
+            print(f"Duplicate node detected and skipped: {split.page_content[:100]}...")
 
 
 
