@@ -201,42 +201,42 @@ class KnowledgeGraph:
         else:
             print("Graph, embeddings, and concepts loaded from cache.")
 
-    def extract_clean_keywords(text, kw_model, nlp_model, used_keywords=None, top_n=5):
+    def extract_clean_keywords(self, text, top_n=5, used_keywords=None):
         """
-        Εξάγει μοναδικά και καθαρά keywords από το κείμενο.
+        Εξαγωγή καθαρών και μοναδικών λέξεων-κλειδιών για τον γράφο.
+
         Args:
-            text (str): Το κείμενο από το οποίο εξάγονται τα keywords.
-            kw_model (KeyBERT): Το μοντέλο KeyBERT για εξαγωγή λέξεων-κλειδιά.
-            nlp_model (spacy.Language): Το μοντέλο spaCy για καθαρισμό των keywords.
-            used_keywords (set): Σετ με ήδη χρησιμοποιημένα keywords για αποφυγή διπλών.
-            top_n (int): Μέγιστος αριθμός keywords για εξαγωγή.
+            text (str): Το κείμενο από το οποίο εξάγονται οι λέξεις-κλειδιά.
+            top_n (int): Ο μέγιστος αριθμός των λέξεων-κλειδιών που θέλουμε.
+            used_keywords (set): Μια συλλογή από ήδη χρησιμοποιημένες λέξεις-κλειδιά.
+
         Returns:
-            str: Ένα μοναδικό και καθαρό keyword για τον κόμβο.
+            str: Μια μοναδική λέξη-κλειδί που αντιπροσωπεύει το κείμενο.
         """
         if used_keywords is None:
             used_keywords = set()
 
         # Εξαγωγή keywords με KeyBERT
-        keybert_keywords = kw_model.extract_keywords(
+        keybert_keywords = self.kw_model.extract_keywords(
             text, keyphrase_ngram_range=(1, 2), stop_words='english', top_n=top_n
         )
-        candidate_keywords = [kw[0] for kw in keybert_keywords]  # Παίρνουμε μόνο τις λέξεις-κλειδιά
+        candidate_keywords = [kw[0] for kw in keybert_keywords]
 
         # Καθαρισμός keywords με spaCy
-        doc = nlp_model(" ".join(candidate_keywords))
+        doc = self.nlp(" ".join(candidate_keywords))
         clean_keywords = [
             token.text for token in doc if token.pos_ in {"NOUN", "PROPN"} and len(token.text) > 2
         ]
 
-        # Επιλογή του πρώτου μη χρησιμοποιημένου keyword
+        # Βρες την πρώτη μοναδική λέξη-κλειδί
         for keyword in clean_keywords:
             if keyword not in used_keywords:
-                used_keywords.add(keyword)  # Προσθήκη στο σύνολο
+                used_keywords.add(keyword)
                 return keyword
 
-        # Επιστροφή "No Keyword" αν δεν υπάρχει διαθέσιμο
+        # Αν δεν βρεθεί μοναδική λέξη-κλειδί, επιστρέφει 'No Keyword'
         return "No Keyword"
-        
+
 
     def _add_nodes(self, splits):
         used_keywords = set()  # Set για αποθήκευση των ήδη χρησιμοποιημένων keywords
@@ -247,8 +247,6 @@ class KnowledgeGraph:
                 # Εξαγωγή μοναδικού και σχετικού keyword
                 unique_keyword = self.extract_clean_keywords(
                     text=split.page_content,
-                    kw_model=self.kw_model,  # Χρησιμοποιούμε το KeyBERT
-                    nlp_model=self.nlp,      # Χρησιμοποιούμε το spaCy
                     used_keywords=used_keywords
                 )
 
@@ -261,6 +259,7 @@ class KnowledgeGraph:
                 self.node_content_hashes.add(content_hash)
             else:
                 print(f"Duplicate node detected and skipped: {split.page_content[:100]}...")
+
 
 
 
