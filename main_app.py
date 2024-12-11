@@ -175,3 +175,14 @@ if st.button("Analyze Files"):
 
     for file_path in pdf_files + json_files + jsonl_files + html_files + csv_files + txt_files:
         os.remove(file_path)
+
+from memory_monitor import check_memory_usage
+import time
+
+st.sidebar.title("Στατιστικά Μνήμης")
+memory_placeholder = st.sidebar.empty()  # Δεσμεύει χώρο στο Sidebar
+
+# Ανανεώνει την τιμή μνήμης κάθε 2 δευτερόλεπτα
+while True:
+    memory_placeholder.text(check_memory_usage())
+    time.sleep(2)  # Αναμονή 2 δευτερολέπτων πριν την επόμενη ενημέρωση
