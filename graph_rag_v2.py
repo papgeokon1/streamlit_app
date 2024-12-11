@@ -218,14 +218,14 @@ class KnowledgeGraph:
 
         # Εξαγωγή keywords με KeyBERT
         keybert_keywords = self.kw_model.extract_keywords(
-            text, keyphrase_ngram_range=(1, 2), stop_words='english', top_n=top_n
+            text, keyphrase_ngram_range=(1, 2), stop_words='english', top_n=10
         )
         candidate_keywords = [kw[0] for kw in keybert_keywords]
 
         # Καθαρισμός keywords με spaCy
         doc = self.nlp(" ".join(candidate_keywords))
         clean_keywords = [
-            token.text for token in doc if token.pos_ in {"NOUN", "PROPN"} and len(token.text) > 2
+            token.text for token in doc if len(token.text) > 2
         ]
 
         # Βρες την πρώτη μοναδική λέξη-κλειδί
