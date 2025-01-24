@@ -6,6 +6,7 @@ import os
 from datasets import load_dataset
 from self_rag import SelfRAG
 from graph_rag_v2 import GraphRAG
+from keyword_analysis import find_common_keywords
 
 # Function to run async functions synchronously
 def run_async(func, *args):
@@ -175,6 +176,37 @@ if st.button("Analyze Files"):
 
     for file_path in pdf_files + json_files + jsonl_files + html_files + csv_files + txt_files:
         os.remove(file_path)
+
+# Keyword Analysis Section
+if st.checkbox("Analyze Common Keywords Between Datasets"):
+    if not dataset and not (uploaded_pdfs or uploaded_jsonls or uploaded_jsons or uploaded_htmls or uploaded_csvs or uploaded_txts):
+        st.error("Please upload files or use the preloaded dataset for analysis.")
+    else:
+        datasets_content = []
+
+        # Συγκέντρωση περιεχομένου από τα αρχεία που ανέβηκαν
+        if uploaded_pdfs:
+            for pdf in uploaded_pdfs:
+                datasets_content.append(fetch_text_from_pdf(pdf))
+        if uploaded_jsonls:
+            for jsonl in uploaded_jsonls:
+                datasets_content.append(fetch_text_from_jsonl(jsonl))
+        if uploaded_csvs:
+            for csv in uploaded_csvs:
+                datasets_content.append(fetch_text_from_csv(csv))
+        if dataset:
+            datasets_content.extend(cleaned_dataset)
+
+        # Εύρεση κοινών λέξεων-κλειδιών
+        results = find_common_keywords(datasets_content, top_n=10)
+
+        # Εμφάνιση αποτελεσμάτων
+        st.subheader("Common Keywords Across Datasets")
+        st.write(", ".join(results["common_keywords"]))
+
+        st.subheader("Keywords by Dataset")
+        for dataset_name, keywords in results["individual_keywords"].items():
+            st.write(f"{dataset_name}: {', '.join(keywords)}")
 
 from memory_monitor import check_memory_usage
 import time
