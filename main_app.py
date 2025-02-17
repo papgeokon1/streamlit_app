@@ -137,7 +137,7 @@ def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_fil
             txt_files=txt_files,
             direct_txt_content=direct_txt_content,
         )
-        asyncio.run(simple_rag.load_data())
+        simple_rag.load_data()
         response = simple_rag.query(query)
         st.write(f"Response: {response}")            
 

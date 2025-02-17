@@ -1,24 +1,24 @@
 import os
+import sys
 import asyncio
 import urllib.request
+import streamlit as st
 from haystack import Pipeline
 from haystack.document_stores.in_memory import InMemoryDocumentStore
 from haystack.components.retrievers import InMemoryEmbeddingRetriever
 from haystack.components.embedders import OpenAIDocumentEmbedder, OpenAITextEmbedder
 from haystack.components.builders import PromptBuilder
 from haystack.components.generators import OpenAIGenerator
+from langchain_community.document_loaders import PDFMinerLoader
 from helper_functions import *
-from langchain_community.document_loaders import PyPDFLoader
-import tempfile
-import streamlit as st
-
 from datasets import load_dataset
+
 # Από τα secrets του Streamlit
 openai_api_key = st.secrets["OPENAI_API_KEY"]
 
 class SimpleRAG:
     def __init__(self, urls=None, pdf_files=None, json_files=None, jsonl_files=None, 
-                 html_files=None, csv_files=None, txt_files=None, jpeg_files=None, direct_txt_content="", dataset=None):
+                 html_files=None, csv_files=None, txt_files=None, jpeg_files=None, direct_txt_content="", dataset=None, top_k=3):
         self.urls = urls or []
         self.pdf_files = pdf_files or []
         self.json_files = json_files or []
@@ -30,9 +30,10 @@ class SimpleRAG:
         self.direct_txt_content = direct_txt_content
         self.dataset = dataset or []
         self.document_store = InMemoryDocumentStore()
+        self.top_k = top_k
         self._initialize_pipeline()
 
-    async def load_data(self):
+    def load_data(self):
         combined_content = ""
         tasks = []
         
@@ -51,12 +52,12 @@ class SimpleRAG:
         for jpeg_file in self.jpeg_files:
             tasks.append(fetch_text_from_jpeg(jpeg_file))
         
-        contents = await asyncio.gather(*tasks)
+        contents = asyncio.gather(*tasks)
         combined_content += "\n".join(filter(None, contents))
         
         for pdf_file in self.pdf_files:
-            loader = PyPDFLoader(pdf_file)
-            pdf_docs = loader.load()
+            pdf_loader = PDFMinerLoader(pdf_file)
+            pdf_docs = pdf_loader.load()
             combined_content += "\n".join(doc.page_content for doc in pdf_docs)
         
         if self.direct_txt_content:
@@ -89,8 +90,7 @@ class SimpleRAG:
     def _index_documents(self, content):
         embedder = OpenAIDocumentEmbedder()
         doc = {"content": content}
-        embedder = OpenAITextEmbedder()
-        doc["embedding"] = embedder.run({"text": content})["embedding"]
+        doc["embedding"] = embedder.run({"documents": [{"content": content}]})["documents"][0]["embedding"]
         self.document_store.write_documents([doc])
 
     def query(self, query):
