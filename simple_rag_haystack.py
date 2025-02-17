@@ -89,7 +89,8 @@ class SimpleRAG:
     def _index_documents(self, content):
         embedder = OpenAIDocumentEmbedder()
         doc = {"content": content}
-        doc["embedding"] = embedder.embed([content])[0]
+        embedder = OpenAITextEmbedder()
+        doc["embedding"] = embedder.run({"text": content})["embedding"]
         self.document_store.write_documents([doc])
 
     def query(self, query):
