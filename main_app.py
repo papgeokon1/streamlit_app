@@ -7,6 +7,7 @@ from datasets import load_dataset
 from self_rag import SelfRAG
 from graph_rag_v2 import GraphRAG
 from keyword_analysis import find_common_keywords
+from simple_rag_haystack import SimpleRAG
 
 # Function to run async functions synchronously
 def run_async(func, *args):
@@ -25,7 +26,8 @@ def clear_database():
 st.title("Medical Assistant for Total Joint Replacement")
 
 # Choose RAG Model
-rag_option = st.selectbox("Choose RAG Model", ("Self RAG", "Graph RAG"))
+rag_option = st.selectbox("Choose RAG Model", ("Self RAG", "Graph RAG", "Simple RAG"))
+
 
 # Load dataset function
 @st.cache_data
@@ -123,6 +125,21 @@ def run_rag_model(rag_option, urls, pdf_files, json_files, jsonl_files, html_fil
                     st.write(content)
         else:
             st.write("No subgraph available.")
+
+    elif rag_option == "Simple RAG":
+        simple_rag = SimpleRAG(
+            urls=urls,
+            pdf_files=pdf_files,
+            json_files=json_files,
+            jsonl_files=jsonl_files,
+            html_files=html_files,
+            csv_files=csv_files,
+            txt_files=txt_files,
+            direct_txt_content=direct_txt_content,
+        )
+        asyncio.run(simple_rag.load_data())
+        response = simple_rag.query(query)
+        st.write(f"Response: {response}")            
 
 if st.button("Analyze Files"):
     dataset = cleaned_dataset if use_dataset else None
