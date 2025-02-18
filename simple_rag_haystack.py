@@ -1,151 +1,117 @@
 import os
 import sys
-import asyncio
-import urllib.request
-import streamlit as st
-from haystack import Pipeline
-from haystack.document_stores.in_memory import InMemoryDocumentStore
-from haystack.components.retrievers import InMemoryEmbeddingRetriever
-from haystack.components.embedders import OpenAIDocumentEmbedder, OpenAITextEmbedder
-from haystack.components.builders import PromptBuilder
-from haystack.components.generators import OpenAIGenerator
+from langchain.prompts import PromptTemplate
+from langchain_openai import ChatOpenAI
+from pydantic.v1 import BaseModel, Field
 from langchain_community.document_loaders import PDFMinerLoader
-from helper_functions import *
+import asyncio
+import streamlit as st
 from datasets import load_dataset
-
 # Από τα secrets του Streamlit
 openai_api_key = st.secrets["OPENAI_API_KEY"]
 
+
+sys.path.append(os.path.abspath(
+    os.path.join(os.getcwd(), '..')))  # Add the parent directory to the path since we work with notebooks
+from helper_functions import *
+from evaluate_rag import *
+
+
+# Prompt για την απάντηση
+response_prompt = PromptTemplate(
+    input_variables=["query", "context"],
+    template="Given the query '{query}' and the context '{context}', generate a response."
+)
+
+
 class SimpleRAG:
-    def __init__(self, urls=None, pdf_files=None, json_files=None, jsonl_files=None, 
-                 html_files=None, csv_files=None, txt_files=None, jpeg_files=None, direct_txt_content="", dataset=None, top_k=3):
-        self.urls = urls or []
-        self.pdf_files = pdf_files or []
-        self.json_files = json_files or []
-        self.jsonl_files = jsonl_files or []
-        self.html_files = html_files or []
-        self.csv_files = csv_files or []
-        self.txt_files = txt_files or []
-        self.jpeg_files = jpeg_files or []
-        self.direct_txt_content = direct_txt_content
-        self.dataset = dataset or []
-        self.document_store = InMemoryDocumentStore()
-        self.top_k = top_k
-        self._initialize_pipeline()
-   
-    def load_data(self):
+    def __init__(self, urls, pdf_files, json_files=None, jsonl_files=None, html_files=None, csv_files=None, txt_files=None, direct_txt_content="", dataset=None, top_k=3):
         combined_content = ""
+        tasks = []
 
-        # Λήψη δεδομένων από URLs (συγχρονισμένη κλήση)
-        for url in self.urls:
-            try:
-                content = fetch_text_from_url(url)
-                if content:
-                    combined_content += content + "\n"
-            except Exception as e:
-                print(f"Error fetching from URL {url}: {e}")
+        # Επεξεργασία URLs
+        if urls:
+            for url in urls:
+                tasks.append(fetch_text_from_url(url))
 
-        # Λήψη δεδομένων από JSON
-        for json_file in self.json_files:
-            try:
-                content = fetch_text_from_json(json_file)
-                if content:
-                    combined_content += content + "\n"
-            except Exception as e:
-                print(f"Error processing JSON {json_file}: {e}")
+        # Επεξεργασία JSON αρχείων
+        if json_files:
+            for json_path in json_files:
+                tasks.append(fetch_text_from_json(json_path))
 
-        # Λήψη δεδομένων από JSONL
-        for jsonl_file in self.jsonl_files:
-            try:
-                content = fetch_text_from_jsonl(jsonl_file)
-                if content:
-                    combined_content += content + "\n"
-            except Exception as e:
-                print(f"Error processing JSONL {jsonl_file}: {e}")
+        # Επεξεργασία JSONL αρχείων
+        if jsonl_files:
+            for jsonl_path in jsonl_files:
+                tasks.append(fetch_text_from_jsonl(jsonl_path))
 
-        # Λήψη δεδομένων από HTML
-        for html_file in self.html_files:
-            try:
-                content = fetch_text_from_html(html_file)
-                if content:
-                    combined_content += content + "\n"
-            except Exception as e:
-                print(f"Error processing HTML {html_file}: {e}")
+        # Επεξεργασία HTML αρχείων
+        if html_files:
+            for html_path in html_files:
+                tasks.append(fetch_text_from_html(html_path))
 
-        # Λήψη δεδομένων από CSV
-        for csv_file in self.csv_files:
-            try:
-                content = fetch_text_from_csv(csv_file)
-                if content:
-                    combined_content += content + "\n"
-            except Exception as e:
-                print(f"Error processing CSV {csv_file}: {e}")
+        # Επεξεργασία CSV αρχείων
+        if csv_files:
+            for csv_path in csv_files:
+                tasks.append(fetch_text_from_csv(csv_path))
 
-        # Λήψη δεδομένων από TXT
-        for txt_file in self.txt_files:
-            try:
-                content = fetch_text_from_txt(txt_file)
-                if content:
-                    combined_content += content + "\n"
-            except Exception as e:
-                print(f"Error processing TXT {txt_file}: {e}")
+        # Επεξεργασία TXT αρχείων
+        if txt_files:
+            for txt_path in txt_files:
+                tasks.append(fetch_text_from_txt(txt_path))
 
-        # Λήψη δεδομένων από εικόνες JPEG
-        for jpeg_file in self.jpeg_files:
-            try:
-                content = fetch_text_from_jpeg(jpeg_file)
-                if content:
-                    combined_content += content + "\n"
-            except Exception as e:
-                print(f"Error processing JPEG {jpeg_file}: {e}")
+        # Προσθήκη περιεχομένου από το text area
+        if direct_txt_content:
+            combined_content += direct_txt_content + "\n\n"
 
-        # Λήψη δεδομένων από PDF
-        for pdf_file in self.pdf_files:
-            try:
-                pdf_loader = PDFMinerLoader(pdf_file)
+        # Εκτέλεση όλων των εργασιών παράλληλα και συνένωση των αποτελεσμάτων
+        contents = asyncio.run(self._fetch_all_contents(tasks))
+        for content in contents:
+            if content:
+                combined_content += content + "\n\n"
+
+        # Επεξεργασία PDF αρχείων (συγχρονισμένα λόγω PDFMinerLoader)
+        if pdf_files:
+            for pdf_path in pdf_files:
+                pdf_loader = PDFMinerLoader(pdf_path)
                 pdf_docs = pdf_loader.load()
-                pdf_text = "\n".join(doc.page_content for doc in pdf_docs)
-                combined_content += pdf_text + "\n"
-            except Exception as e:
-                print(f"Error processing PDF {pdf_file}: {e}")
+                for pdf_doc in pdf_docs:
+                    combined_content += pdf_doc.page_content + "\n\n"
 
-        # Προσθήκη δεδομένων από το πεδίο text area
-        if self.direct_txt_content:
-            combined_content += self.direct_txt_content + "\n"
+        # Προσθήκη περιεχομένου από dataset
+        if dataset:
+            combined_content += "\n\n".join(dataset) + "\n\n"
 
-        # Προσθήκη dataset
-        if self.dataset:
-            combined_content += "\n".join(self.dataset) + "\n"
+        # Δημιουργία vectorstore
+        if combined_content.strip():
+            self.vectorstore = encode_from_string(combined_content)
+        else:
+            raise ValueError("The combined content is empty. Cannot create vectorstore.")
 
-        # Αν δεν φορτώθηκε τίποτα, ρίξε exception
-        if not combined_content.strip():
-            raise ValueError("No content was loaded.")
+        # Αρχικοποίηση LLM
+        self.top_k = top_k
+        self.llm = ChatOpenAI(model="gpt-4o-mini", max_tokens=1000, temperature=0)
+        self.response_chain = response_prompt | self.llm
 
-        # Αποθήκευση στο document store
-        self._index_documents(combined_content)
+    async def _fetch_all_contents(self, tasks):
+        """Εκτέλεση όλων των ασύγχρονων εργασιών."""
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        return [result for result in results if isinstance(result, str)]
+    
+    def run(self, query):
+        print(f"Processing query: {query}")
 
-    def _initialize_pipeline(self):
-        self.text_embedder = OpenAITextEmbedder()
-        self.retriever = InMemoryEmbeddingRetriever(self.document_store)
-        self.prompt_builder = PromptBuilder(template="""Given these documents, answer the question.\nDocuments:\n{% for doc in documents %}\n{{ doc.content }}\n{% endfor %}\nQuestion: {{query}}\nAnswer:""")
-        self.llm = OpenAIGenerator()
-        
-        self.pipeline = Pipeline()
-        self.pipeline.add_component("text_embedder", self.text_embedder)
-        self.pipeline.add_component("retriever", self.retriever)
-        self.pipeline.add_component("prompt_builder", self.prompt_builder)
-        self.pipeline.add_component("llm", self.llm)
-        
-        self.pipeline.connect("text_embedder.embedding", "retriever.query_embedding")
-        self.pipeline.connect("retriever.documents", "prompt_builder.documents")
-        self.pipeline.connect("prompt_builder", "llm")
+        # Ανάκτηση σχετικών εγγράφων
+        print("Retrieving relevant documents...")
+        docs = self.vectorstore.similarity_search(query, k=self.top_k)
+        contexts = [doc.page_content for doc in docs]
 
-    def _index_documents(self, content):
-        embedder = OpenAIDocumentEmbedder()
-        doc = {"content": content}
-        doc["embedding"] = embedder.run({"documents": [{"content": content}]})["documents"][0]["embedding"]
-        self.document_store.write_documents([doc])
+        # Αν δεν υπάρχουν έγγραφα, απαντάει χωρίς context
+        if not contexts:
+            print("No relevant documents found. Generating response without retrieval...")
+            input_data = {"query": query, "context": ""}
+            return self.response_chain.invoke(input_data).response
 
-    def query(self, query):
-        result = self.pipeline.run(data={"prompt_builder": {"query": query}, "text_embedder": {"text": query}})
-        return result["llm"]["replies"][0]
+        # Δημιουργία απάντησης με βάση τα ανακτημένα έγγραφα
+        print("Generating response...")
+        input_data = {"query": query, "context": "\n".join(contexts)}
+        return self.response_chain.invoke(input_data).response

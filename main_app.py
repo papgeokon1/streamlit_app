@@ -86,8 +86,7 @@ if st.button("Get Answer with Simple RAG"):
         direct_txt_content=direct_txt_content,
         dataset=dataset
     )
-    simple_rag.load_data()
-    simple_response = simple_rag.query(query)
+    simple_response = simple_rag.run(query)
     st.write(f"Simple RAG Response: {simple_response}")
     
     if st.button("More Detailed Answer (Graph RAG)"):
