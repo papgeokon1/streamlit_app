@@ -32,43 +32,96 @@ class SimpleRAG:
         self.document_store = InMemoryDocumentStore()
         self.top_k = top_k
         self._initialize_pipeline()
-
+   
     def load_data(self):
         combined_content = ""
-        tasks = []
-        
+
+        # Λήψη δεδομένων από URLs (συγχρονισμένη κλήση)
         for url in self.urls:
-            tasks.append(fetch_text_from_url(url))
+            try:
+                content = fetch_text_from_url(url)
+                if content:
+                    combined_content += content + "\n"
+            except Exception as e:
+                print(f"Error fetching from URL {url}: {e}")
+
+        # Λήψη δεδομένων από JSON
         for json_file in self.json_files:
-            tasks.append(fetch_text_from_json(json_file))
+            try:
+                content = fetch_text_from_json(json_file)
+                if content:
+                    combined_content += content + "\n"
+            except Exception as e:
+                print(f"Error processing JSON {json_file}: {e}")
+
+        # Λήψη δεδομένων από JSONL
         for jsonl_file in self.jsonl_files:
-            tasks.append(fetch_text_from_jsonl(jsonl_file))
+            try:
+                content = fetch_text_from_jsonl(jsonl_file)
+                if content:
+                    combined_content += content + "\n"
+            except Exception as e:
+                print(f"Error processing JSONL {jsonl_file}: {e}")
+
+        # Λήψη δεδομένων από HTML
         for html_file in self.html_files:
-            tasks.append(fetch_text_from_html(html_file))
+            try:
+                content = fetch_text_from_html(html_file)
+                if content:
+                    combined_content += content + "\n"
+            except Exception as e:
+                print(f"Error processing HTML {html_file}: {e}")
+
+        # Λήψη δεδομένων από CSV
         for csv_file in self.csv_files:
-            tasks.append(fetch_text_from_csv(csv_file))
+            try:
+                content = fetch_text_from_csv(csv_file)
+                if content:
+                    combined_content += content + "\n"
+            except Exception as e:
+                print(f"Error processing CSV {csv_file}: {e}")
+
+        # Λήψη δεδομένων από TXT
         for txt_file in self.txt_files:
-            tasks.append(fetch_text_from_txt(txt_file))
+            try:
+                content = fetch_text_from_txt(txt_file)
+                if content:
+                    combined_content += content + "\n"
+            except Exception as e:
+                print(f"Error processing TXT {txt_file}: {e}")
+
+        # Λήψη δεδομένων από εικόνες JPEG
         for jpeg_file in self.jpeg_files:
-            tasks.append(fetch_text_from_jpeg(jpeg_file))
-        
-        contents = asyncio.gather(*tasks)
-        combined_content += "\n".join(filter(None, contents))
-        
+            try:
+                content = fetch_text_from_jpeg(jpeg_file)
+                if content:
+                    combined_content += content + "\n"
+            except Exception as e:
+                print(f"Error processing JPEG {jpeg_file}: {e}")
+
+        # Λήψη δεδομένων από PDF
         for pdf_file in self.pdf_files:
-            pdf_loader = PDFMinerLoader(pdf_file)
-            pdf_docs = pdf_loader.load()
-            combined_content += "\n".join(doc.page_content for doc in pdf_docs)
-        
+            try:
+                pdf_loader = PDFMinerLoader(pdf_file)
+                pdf_docs = pdf_loader.load()
+                pdf_text = "\n".join(doc.page_content for doc in pdf_docs)
+                combined_content += pdf_text + "\n"
+            except Exception as e:
+                print(f"Error processing PDF {pdf_file}: {e}")
+
+        # Προσθήκη δεδομένων από το πεδίο text area
         if self.direct_txt_content:
-            combined_content += "\n" + self.direct_txt_content
-        
+            combined_content += self.direct_txt_content + "\n"
+
+        # Προσθήκη dataset
         if self.dataset:
-            combined_content += "\n" + "\n".join(self.dataset)
-        
+            combined_content += "\n".join(self.dataset) + "\n"
+
+        # Αν δεν φορτώθηκε τίποτα, ρίξε exception
         if not combined_content.strip():
             raise ValueError("No content was loaded.")
-        
+
+        # Αποθήκευση στο document store
         self._index_documents(combined_content)
 
     def _initialize_pipeline(self):
