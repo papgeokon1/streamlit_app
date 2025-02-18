@@ -86,7 +86,10 @@ if st.button("Get Answer with Simple RAG"):
         direct_txt_content=direct_txt_content,
         dataset=dataset
     )
-    simple_rag.load_data()
+    async def load_simple_rag():
+     await simple_rag.load_data()
+
+    asyncio.run(load_simple_rag())
     simple_response = simple_rag.query(query)
     st.write(f"Simple RAG Response: {simple_response}")
     

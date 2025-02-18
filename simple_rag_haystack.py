@@ -37,7 +37,7 @@ class SimpleRAG:
 
 
 
-    def load_data(self):
+    async def load_data(self):
         combined_content = ""
         tasks = []
         
@@ -64,7 +64,7 @@ class SimpleRAG:
             asyncio.set_event_loop(loop)
 
         nest_asyncio.apply()  # Επιτρέπει nested event loops
-        contents = loop.run_until_complete(asyncio.gather(*tasks))
+        contents =  await asyncio.gather(*tasks) 
 
         combined_content += "\n".join(filter(None, contents))
 
