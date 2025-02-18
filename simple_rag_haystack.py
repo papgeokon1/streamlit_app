@@ -13,8 +13,6 @@ from langchain_community.document_loaders import PDFMinerLoader
 from helper_functions import *
 from datasets import load_dataset
 
-import nest_asyncio
-
 # Από τα secrets του Streamlit
 openai_api_key = st.secrets["OPENAI_API_KEY"]
 
@@ -35,9 +33,7 @@ class SimpleRAG:
         self.top_k = top_k
         self._initialize_pipeline()
 
-
-
-    async def load_data(self):
+    def load_data(self):
         combined_content = ""
         tasks = []
         
@@ -55,38 +51,25 @@ class SimpleRAG:
             tasks.append(fetch_text_from_txt(txt_file))
         for jpeg_file in self.jpeg_files:
             tasks.append(fetch_text_from_jpeg(jpeg_file))
-
-        # ✅ Σωστή χρήση event loop για Streamlit
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
-        nest_asyncio.apply()  # Επιτρέπει nested event loops
-        contents =  await asyncio.gather(*tasks) 
-
+        
+        contents = asyncio.gather(*tasks)
         combined_content += "\n".join(filter(None, contents))
-
-        # Διαχείριση PDF αρχείων (συγχρονισμένη λειτουργία)
+        
         for pdf_file in self.pdf_files:
             pdf_loader = PDFMinerLoader(pdf_file)
             pdf_docs = pdf_loader.load()
             combined_content += "\n".join(doc.page_content for doc in pdf_docs)
-
-        # Προσθήκη χειροκίνητου κειμένου
+        
         if self.direct_txt_content:
             combined_content += "\n" + self.direct_txt_content
-
-        # Προσθήκη περιεχομένου από dataset
+        
         if self.dataset:
             combined_content += "\n" + "\n".join(self.dataset)
-
+        
         if not combined_content.strip():
             raise ValueError("No content was loaded.")
-
+        
         self._index_documents(combined_content)
-
 
     def _initialize_pipeline(self):
         self.text_embedder = OpenAITextEmbedder()
