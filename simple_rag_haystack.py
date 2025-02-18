@@ -33,6 +33,8 @@ class SimpleRAG:
         self.top_k = top_k
         self._initialize_pipeline()
 
+
+
     def load_data(self):
         combined_content = ""
         tasks = []
@@ -51,25 +53,34 @@ class SimpleRAG:
             tasks.append(fetch_text_from_txt(txt_file))
         for jpeg_file in self.jpeg_files:
             tasks.append(fetch_text_from_jpeg(jpeg_file))
-        
-        contents = asyncio.gather(*tasks)
+
+        # ✅ Διόρθωση για Streamlit
+        if asyncio.get_event_loop().is_running():
+            contents = asyncio.run(asyncio.gather(*tasks))  # Εκτέλεση async κλήσεων
+        else:
+            contents = asyncio.run(asyncio.gather(*tasks))
+
         combined_content += "\n".join(filter(None, contents))
-        
+
+        # Διαχείριση PDF αρχείων (συγχρονισμένη λειτουργία)
         for pdf_file in self.pdf_files:
             pdf_loader = PDFMinerLoader(pdf_file)
             pdf_docs = pdf_loader.load()
             combined_content += "\n".join(doc.page_content for doc in pdf_docs)
-        
+
+        # Προσθήκη χειροκίνητου κειμένου
         if self.direct_txt_content:
             combined_content += "\n" + self.direct_txt_content
-        
+
+        # Προσθήκη περιεχομένου από dataset
         if self.dataset:
             combined_content += "\n" + "\n".join(self.dataset)
-        
+
         if not combined_content.strip():
             raise ValueError("No content was loaded.")
-        
+
         self._index_documents(combined_content)
+
 
     def _initialize_pipeline(self):
         self.text_embedder = OpenAITextEmbedder()
