@@ -114,4 +114,5 @@ class SimpleRAG:
         # Δημιουργία απάντησης με βάση τα ανακτημένα έγγραφα
         print("Generating response...")
         input_data = {"query": query, "context": "\n".join(contexts)}
-        return self.response_chain.invoke(input_data).response
+        return self.response_chain.invoke(input_data).content
+
