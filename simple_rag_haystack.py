@@ -13,6 +13,8 @@ from langchain_community.document_loaders import PDFMinerLoader
 from helper_functions import *
 from datasets import load_dataset
 
+import nest_asyncio
+
 # Από τα secrets του Streamlit
 openai_api_key = st.secrets["OPENAI_API_KEY"]
 
@@ -54,11 +56,15 @@ class SimpleRAG:
         for jpeg_file in self.jpeg_files:
             tasks.append(fetch_text_from_jpeg(jpeg_file))
 
-        # ✅ Διόρθωση για Streamlit
-        if asyncio.get_event_loop().is_running():
-            contents = asyncio.run(asyncio.gather(*tasks))  # Εκτέλεση async κλήσεων
-        else:
-            contents = asyncio.run(asyncio.gather(*tasks))
+        # ✅ Σωστή χρήση event loop για Streamlit
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        nest_asyncio.apply()  # Επιτρέπει nested event loops
+        contents = loop.run_until_complete(asyncio.gather(*tasks))
 
         combined_content += "\n".join(filter(None, contents))
 
