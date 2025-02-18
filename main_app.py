@@ -108,6 +108,9 @@ if st.session_state.simple_rag_response:
     
     with col1:
         if st.button("More Detailed Answer (Graph RAG)"):
+            dataset = cleaned_dataset if use_dataset else None
+            pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, urls = [], [], [], [], [], [], []
+            urls = url_input.splitlines() if url_input else []   
             graph_rag = GraphRAG(
                 urls=urls,
                 pdf_files=pdf_files,
@@ -129,6 +132,10 @@ if st.session_state.simple_rag_response:
 
     with col2:
         if st.button("More Accurate Answer (Self RAG)"):
+
+            dataset = cleaned_dataset if use_dataset else None
+            pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, urls = [], [], [], [], [], [], []
+            urls = url_input.splitlines() if url_input else [] 
             self_rag = SelfRAG(
                 urls=urls,
                 pdf_files=pdf_files,
