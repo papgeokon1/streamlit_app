@@ -25,7 +25,7 @@ response_prompt = PromptTemplate(
 
 
 class SimpleRAG:
-    def __init__(self, urls, pdf_files, json_files=None, jsonl_files=None, html_files=None, csv_files=None, txt_files=None, direct_txt_content="", dataset=None, top_k=3):
+    def __init__(self, urls=None, pdf_files=None, json_files=None, jsonl_files=None, html_files=None, csv_files=None, txt_files=None, direct_txt_content="", dataset=None, top_k=1):
         combined_content = ""
         tasks = []
 
