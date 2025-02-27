@@ -1,3 +1,4 @@
+
 import streamlit as st
 from io import BytesIO
 import tempfile
@@ -70,15 +71,6 @@ url_input = st.text_area("Enter URLs (one per line)", "")
 # User query input
 query = st.text_input("Enter your query:")
 
-if "simple_rag_response" not in st.session_state:
-    st.session_state.simple_rag_response = None
-
-if "graph_rag_response" not in st.session_state:
-    st.session_state.graph_rag_response = None
-
-if "self_rag_response" not in st.session_state:
-    st.session_state.self_rag_response = None
-
 if st.button("Get Answer with Simple RAG"):
     dataset = cleaned_dataset if use_dataset else None
     pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, urls = [], [], [], [], [], [], []
@@ -95,79 +87,53 @@ if st.button("Get Answer with Simple RAG"):
         direct_txt_content=direct_txt_content,
         dataset=dataset
     )
+    async def load_simple_rag():
+     await simple_rag.load_data()
+
+    asyncio.run(load_simple_rag())
+    simple_response = simple_rag.query(query)
+    st.write(f"Simple RAG Response: {simple_response}")
     
-    st.session_state.simple_rag_response = simple_rag.run(query)
+    if st.button("More Detailed Answer (Graph RAG)"):
+        graph_rag = GraphRAG(
+            urls=urls,
+            pdf_files=pdf_files,
+            json_files=json_files,
+            jsonl_files=jsonl_files,
+            html_files=html_files,
+            csv_files=csv_files,
+            txt_files=txt_files,
+            direct_txt_content=direct_txt_content,
+            dataset=dataset
+        )
+        asyncio.run(graph_rag.initialize())
+        detailed_response, subgraph = graph_rag.query(query)
+        st.write("Graph RAG Answer:")
+        st.write(detailed_response)
+        if subgraph:
+            st.write("Subgraph Visualization:")
+            graph_rag.visualizer.visualize_subgraph(subgraph)
+            st.write("Node Contents:")
+            for node_id, data in subgraph.nodes(data=True):
+                node_label = data.get("label", f"Node {node_id}")
+                with st.expander(f"{node_label} Content"):
+                    content = graph_rag.visualizer.display_node_content(subgraph, node_id)
+                    st.write(content)
 
-# Εμφάνιση Simple RAG απάντησης αν έχει υπολογιστεί
-if st.session_state.simple_rag_response:
-    st.write(f"### Simple RAG Response:")
-    st.write(st.session_state.simple_rag_response)
-
-    # Επιλογές για πιο λεπτομερή ή πιο ακριβή απάντηση
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if st.button("More Detailed Answer (Graph RAG)"):
-            dataset = cleaned_dataset if use_dataset else None
-            pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, urls = [], [], [], [], [], [], []
-            urls = url_input.splitlines() if url_input else []   
-            graph_rag = GraphRAG(
-                urls=urls,
-                pdf_files=pdf_files,
-                json_files=json_files,
-                jsonl_files=jsonl_files,
-                html_files=html_files,
-                csv_files=csv_files,
-                txt_files=txt_files,
-                direct_txt_content=direct_txt_content,
-                dataset=dataset
-            )
-            asyncio.run(graph_rag.initialize())
-            st.session_state.graph_rag_response, subgraph = graph_rag.query(query)
-
-            if subgraph:
-                st.session_state.graph_rag_subgraph = subgraph
-            else:
-                st.session_state.graph_rag_subgraph = None
-
-    with col2:
-        if st.button("More Accurate Answer (Self RAG)"):
-
-            dataset = cleaned_dataset if use_dataset else None
-            pdf_files, json_files, jsonl_files, html_files, csv_files, txt_files, urls = [], [], [], [], [], [], []
-            urls = url_input.splitlines() if url_input else [] 
-            self_rag = SelfRAG(
-                urls=urls,
-                pdf_files=pdf_files,
-                json_files=json_files,
-                jsonl_files=jsonl_files,
-                html_files=html_files,
-                csv_files=csv_files,
-                txt_files=txt_files,
-                direct_txt_content=direct_txt_content,
-                dataset=dataset
-            )
-            st.session_state.self_rag_response = self_rag.run(query)
-
-# Εμφάνιση απάντησης από Graph RAG αν έχει επιλεγεί
-if st.session_state.graph_rag_response:
-    st.write("### Graph RAG Answer:")
-    st.write(st.session_state.graph_rag_response)
-
-    if st.session_state.graph_rag_subgraph:
-        st.write("#### Subgraph Visualization:")
-        graph_rag.visualizer.visualize_subgraph(st.session_state.graph_rag_subgraph)
-        st.write("#### Node Contents:")
-        for node_id, data in st.session_state.graph_rag_subgraph.nodes(data=True):
-            node_label = data.get("label", f"Node {node_id}")
-            with st.expander(f"{node_label} Content"):
-                content = graph_rag.visualizer.display_node_content(st.session_state.graph_rag_subgraph, node_id)
-                st.write(content)
-
-# Εμφάνιση απάντησης από Self RAG αν έχει επιλεγεί
-if st.session_state.self_rag_response:
-    st.write("### Self RAG Answer:")
-    st.write(st.session_state.self_rag_response)
+    if st.button("More Accurate Answer (Self RAG)"):
+        self_rag = SelfRAG(
+            urls=urls,
+            pdf_files=pdf_files,
+            json_files=json_files,
+            jsonl_files=jsonl_files,
+            html_files=html_files,
+            csv_files=csv_files,
+            txt_files=txt_files,
+            direct_txt_content=direct_txt_content,
+            dataset=dataset
+        )
+        accurate_response = self_rag.run(query)
+        st.write(f"Self RAG Response: {accurate_response}")
 
 # Sidebar Memory Monitoring
 st.sidebar.title("Memory Usage Statistics")
