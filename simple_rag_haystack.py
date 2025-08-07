@@ -69,13 +69,16 @@ class SimpleRAG:
             if content:
                 combined_content += content + "\n\n"
 
-        # Επεξεργασία PDF αρχείων (συγχρονισμένα λόγω PDFMinerLoader)
         if pdf_files:
             for pdf_path in pdf_files:
-                pdf_loader = PDFMinerLoader(pdf_path)
-                pdf_docs = pdf_loader.load()
-                for pdf_doc in pdf_docs:
-                    combined_content += pdf_doc.page_content + "\n\n"
+                print(f"Processing PDF file: {pdf_path}")
+                try:
+                    pdf_text = extract_text_from_pdf_pymupdf(pdf_path)
+                    if pdf_text:
+                        combined_content += f"\n--- Content from {os.path.basename(pdf_path)} ---\n"
+                        combined_content += pdf_text + "\n\n"
+                except Exception as e:
+                    print(f"Error parsing {pdf_path}: {e}")
 
         # Προσθήκη περιεχομένου από dataset
         if dataset:

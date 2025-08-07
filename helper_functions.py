@@ -31,6 +31,12 @@ from bs4 import BeautifulSoup
 from PIL import Image
 import pytesseract
 
+
+
+# Καθορισμός διαδρομής Tesseract (για Windows)
+pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+
+
 async def fetch_text_from_jpeg(jpeg_file):
     """
     Εξάγει κείμενο από ένα αρχείο JPEG χρησιμοποιώντας OCR.
@@ -150,6 +156,22 @@ def text_wrap(text, width=120):
         str: The wrapped text.
     """
     return textwrap.fill(text, width=width)
+import fitz  # PyMuPDF
+
+def extract_text_from_pdf_pymupdf(pdf_path):
+    """
+    Εξάγει το πλήρες κείμενο από ένα PDF αρχείο χρησιμοποιώντας τη βιβλιοθήκη PyMuPDF (fitz).
+    Διατηρεί καλή μορφοποίηση και είναι πολύ αποδοτικό.
+    """
+    try:
+        doc = fitz.open(pdf_path)
+        text = ""
+        for page in doc:
+            text += page.get_text() + "\n"
+        return text.strip()
+    except Exception as e:
+        print(f"Σφάλμα κατά την ανάγνωση του PDF {pdf_path}: {e}")
+        return ""
 
 
 def encode_pdf(path, chunk_size=1000, chunk_overlap=200):
