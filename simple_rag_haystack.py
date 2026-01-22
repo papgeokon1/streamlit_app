@@ -26,23 +26,14 @@ response_prompt = PromptTemplate(
 
 class SimpleRAG:
     def __init__(self, urls=None, pdf_files=None, json_files=None, jsonl_files=None, html_files=None, csv_files=None, txt_files=None, direct_txt_content="", dataset=None, top_k=1):
-        combined_parts = []
+        combined_content = ""
         tasks = []
 
         if urls:
             for url in urls:
                 tasks.append(fetch_text_from_url(url))
 
-            results = asyncio.run(asyncio.gather(*tasks))
 
-            for res in results:
-                if res:
-                    combined_parts.append(res)
-
-        combined_content = "\n\n".join(combined_parts)
-
-        if not combined_content.strip():
-            raise ValueError("The combined content is empty. Cannot create vectorstore.")
 
         # Επεξεργασία JSON αρχείων
         if json_files:
@@ -128,5 +119,6 @@ class SimpleRAG:
         print("Generating response...")
         input_data = {"query": query, "context": "\n".join(contexts)}
         return self.response_chain.invoke(input_data).content
+
 
 
