@@ -103,30 +103,31 @@ async def fetch_text_from_html(html_file):
 
 
 async def fetch_text_from_url(url):
-    """
-    Ασύγχρονη συνάρτηση που εξάγει το κείμενο από ένα URL και το επιστρέφει ως string.
-    """
     try:
-        async with aiohttp.ClientSession() as session:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (compatible; RAGApp/1.0)",
+            "Accept-Language": "en-US,en;q=0.9",
+        }
+
+        timeout = aiohttp.ClientTimeout(total=20)
+
+        async with aiohttp.ClientSession(headers=headers, timeout=timeout) as session:
             async with session.get(url) as response:
-                response.raise_for_status()  # Αναφέρει σφάλμα για κακές καταστάσεις
+                response.raise_for_status()
                 html_content = await response.text()
 
-                # Χρησιμοποιεί το BeautifulSoup για ανάλυση του HTML
                 soup = BeautifulSoup(html_content, "html.parser")
-
-                # Εξαγωγή του κειμένου από τη σελίδα
                 text = soup.get_text(separator="\n")
 
-                # Καθαρισμός του κειμένου
-                clean_text = '\n'.join(line.strip() for line in text.splitlines() if line.strip())
+                clean_text = "\n".join(
+                    line.strip() for line in text.splitlines() if line.strip()
+                )
 
                 return clean_text
 
-    except aiohttp.ClientError as e:
-        print(f"Error fetching the URL: {e}")
+    except Exception as e:
+        print(f"[URL ERROR] {url} -> {e}")
         return None
-
 
 def replace_t_with_space(list_of_documents):
     """
@@ -454,4 +455,5 @@ async def retry_with_exponential_backoff(coroutine, max_retries=5):
             await exponential_backoff(attempt)
 
     # If max retries are reached without success, raise an exception
+
     raise Exception("Max retries reached")
